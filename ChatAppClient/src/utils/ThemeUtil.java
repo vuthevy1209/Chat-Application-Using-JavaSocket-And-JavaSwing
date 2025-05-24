@@ -3,6 +3,7 @@ package utils;
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
+import java.util.Objects;
 
 public class ThemeUtil {
     // Colors
@@ -53,5 +54,24 @@ public class ThemeUtil {
         };
         panel.setOpaque(false);
         return panel;
+    }
+
+    // create a pastel color based on username
+    public static Color generateAvatarColor(String username) {
+        if (username == null || username.isEmpty()) {
+            return Color.GRAY; // Default color if username is empty
+        }
+
+        int hash = Objects.hash(username);
+        int r = (hash & 0xFF0000) >> 16;
+        int g = (hash & 0x00FF00) >> 8;
+        int b = hash & 0x0000FF;
+        
+        // Make it pastel by mixing with white
+        r = (r + 255) / 2;
+        g = (g + 255) / 2;
+        b = (b + 255) / 2;
+        
+        return new Color(r, g, b);
     }
 }

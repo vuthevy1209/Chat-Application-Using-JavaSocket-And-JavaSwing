@@ -1,16 +1,15 @@
-package models;
+package dto.request;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 import lombok.Builder;
-import lombok.Setter;
 import lombok.Getter;
+import lombok.Setter;
 
-@Setter
 @Getter
+@Setter
 @Builder
-public class User implements Serializable {
+public class RegisterRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String id;
@@ -18,10 +17,5 @@ public class User implements Serializable {
     private String email;
     private String password;
     private String avatarPath;
-
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    @Builder.Default
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private String requestType;
 }

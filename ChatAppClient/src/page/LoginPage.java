@@ -1,15 +1,23 @@
 package page;
 
 import components.customs.ButtonCustom;
-import components.customs.TextFieldCustom;
-import services.FakeDataService;
-import services.ChatService;
+import config.Authentication;
+import dto.request.ApiRequest;
+import dto.request.AuthenticateRequest;
+import dto.response.ApiResponse;
+import dto.response.UserResponse;
+import models.User;
 import utils.ThemeUtil;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.Socket;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class LoginPage extends JFrame implements ActionListener {
     private JTextField usernameField;
@@ -18,6 +26,8 @@ public class LoginPage extends JFrame implements ActionListener {
     private JButton registerButton;
     
     public LoginPage() {
+
+        // Set up the frame
         setTitle("Chat App - Login");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(400, 500);
@@ -87,52 +97,53 @@ public class LoginPage extends JFrame implements ActionListener {
                 JOptionPane.showMessageDialog(this, "Please enter username and password", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            
-            // Try to get ChatService instance
-            ChatService chatService = null;
-            try {
-                Class<?> appClass = Class.forName("App");
-                java.lang.reflect.Method getChatServiceMethod = appClass.getMethod("getChatService");
-                chatService = (ChatService) getChatServiceMethod.invoke(null);
-            } catch (Exception ex) {
-                System.err.println("Could not get ChatService from App: " + ex.getMessage());
-            }
-            
-            if (chatService != null && chatService.isConnected()) {
-                // Use socket service for login
-                chatService.login(username, password, response -> {
-                    if (response.isSuccess()) {
-                        // Successfully logged in with socket service
-                        SwingUtilities.invokeLater(() -> {
-                            // Also login with fake data service for now
-                            // (In a production app, we would remove this fake data dependency)
-                            FakeDataService dataService = FakeDataService.getInstance();
-                            dataService.login(username, password);
+
+            try (Socket socket = new Socket("localhost", 8080)) {
+                ObjectOutputStream outObject = new ObjectOutputStream(socket.getOutputStream());
+                outObject.flush();
+                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+
+                ApiRequest request = ApiRequest.builder()
+                        .method("POST")
+                        .url("/login")
+                        .payload(AuthenticateRequest.builder()
+                                .username(username)
+                                .password(password)
+                                .build())
+                        .build();
+
+                // Send the request
+                outObject.writeObject(request);
+                outObject.flush();
+
+                // Read the response
+                ApiResponse response = (ApiResponse) in.readObject();
+
+                System.out.println("Response Code: " + response.getCode());
+                System.out.println("Response Message: " + response.getMessage());
+
+                if (response.getCode().equals("200")) {
+                    UserResponse userResponse = (UserResponse) response.getData();
+                    Authentication.setUser(User.builder()
+                            .id(userResponse.getId())
+                            .username(userResponse.getUsername())
+                            .email(userResponse.getEmail())
+                            .avatarPath(userResponse.getAvatarPath())
+                            .build());
                             
-                            // Open chat page
-                            ChatPage chatPage = new ChatPage();
-                            chatPage.setVisible(true);
-                            this.dispose();
-                        });
-                    } else {
-                        SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(this, "Login failed: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                        });
-                    }
-                });
-            } else {
-                // Fallback to fake data service
-                FakeDataService dataService = FakeDataService.getInstance();
-                boolean success = dataService.login(username, password);
-                
-                if (success) {
-                    // Open chat page
-                    ChatPage chatPage = new ChatPage();
-                    chatPage.setVisible(true);
-                    this.dispose();
+                    JOptionPane.showMessageDialog(this, "Login successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    // redirect to main chat page
                 } else {
-                    JOptionPane.showMessageDialog(this, "Invalid username or password", "Error", JOptionPane.ERROR_MESSAGE);
+                    // Login failed, show error message
+                    JOptionPane.showMessageDialog(this, response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
+
+                // Close streams
+                outObject.close();
+                in.close();
+                socket.close();
+            } catch (IOException | ClassNotFoundException ex) {
+                ex.printStackTrace();
             }
         } else if (e.getSource() == registerButton) {
             // Open register page

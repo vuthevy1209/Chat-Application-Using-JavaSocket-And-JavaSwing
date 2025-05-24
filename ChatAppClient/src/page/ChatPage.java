@@ -7,6 +7,7 @@ import components.OnlineUserItem;
 import components.customs.*;
 import models.Message;
 import models.User;
+import page.ChatPage.ChatRefreshCallback;
 import models.Chat;
 import services.FakeDataService;
 import services.ChatService;
@@ -19,6 +20,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.net.Socket;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,9 +34,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class ChatPage extends JFrame {
-    private FakeDataService dataService;
-    private User currentUser;
-    private Chat currentChat;
+    private Socket socket;
+    private BufferedWriter out;
+    private BufferedReader in;
+    private User currentUser; // Current logged-in user
+    private Chat currentChat; // Current chat being viewed by the user
     private services.ChatService chatService;
     
     // UI Components
@@ -55,53 +61,6 @@ public class ChatPage extends JFrame {
     }
     
     public ChatPage() {
-        dataService = FakeDataService.getInstance();
-        currentUser = dataService.getCurrentUser();
-        
-        // Try to get chatService instance
-        try {
-            Class<?> appClass = Class.forName("App");
-            java.lang.reflect.Method getChatServiceMethod = appClass.getMethod("getChatService");
-            chatService = (ChatService) getChatServiceMethod.invoke(null);
-            
-            // If we got the chat service, register for user status change notifications
-            if (chatService != null) {
-                chatService.addUserStatusListener(user -> {
-                    // Refresh the online users list when user status changes
-                    loadOnlineUsers();
-                    System.out.println("User status changed: " + user.getUsername() + " is now " + 
-                                      (user.isOnline() ? "online" : "offline"));
-                    
-                    // Only show notification if it's not about current user
-                    if (currentUser != null && !user.getId().equals(currentUser.getId())) {
-                        final User changedUser = user; // Make effectively final for lambda
-                        SwingUtilities.invokeLater(() -> {
-                            showUserStatusNotification(changedUser, changedUser.isOnline());
-                        });
-                    }
-                });
-            }
-        } catch (Exception e) {
-            System.err.println("Could not get ChatService from App: " + e.getMessage());
-            chatService = null;
-        }
-        
-        // For testing purposes, if no user is logged in, use David Moore (user1)
-        if (currentUser == null) {
-            // Try to login as the default test user
-            boolean success = dataService.login("david@example.com", "password");
-            if (success) {
-                currentUser = dataService.getCurrentUser();
-                System.out.println("Auto-logged in as default user: " + currentUser.getUsername());
-            } else {
-                JOptionPane.showMessageDialog(this, "You must be logged in to access chat", "Error", JOptionPane.ERROR_MESSAGE);
-                LoginPage loginPage = new LoginPage();
-                loginPage.setVisible(true);
-                this.dispose();
-                return;
-            }
-        }
-        
         setTitle("Chat App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 700);
