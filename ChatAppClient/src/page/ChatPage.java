@@ -43,7 +43,6 @@ import services.AuthService;
 import services.ChatService;
 import services.MessageService;
 import services.UserService;
-import services.WebSocketService;
 
 
 public class ChatPage extends JFrame {
@@ -74,8 +73,6 @@ public class ChatPage extends JFrame {
         setSize(1200, 700);
         setLocationRelativeTo(null);
         setMinimumSize(new Dimension(800, 500));
-
-        WebSocketService.connect();
 
         // Add window listener to handle close operation
         addWindowListener(new WindowAdapter() {
@@ -589,21 +586,6 @@ public class ChatPage extends JFrame {
             System.err.println("Failed to send message: " + response.getMessage());
         }
     }
-
-    public void onMessageReceived(MessageResponse message) {
-        SwingUtilities.invokeLater(() -> {
-            // Check if message belongs to current chat
-            if (currentChat != null && message.getChatId().equals(currentChat.getId())) {
-                // Add message to current chat and refresh
-                // You'll need to convert MessageResponse to Message and add to chat                
-                // Refresh the chat display
-                loadChat(currentChat);
-            }
-            
-            // Always refresh chat list to update last message preview
-            loadChatList();
-        });
-    }
     
     // Timer to periodically refresh online users
     private void startOnlineUsersRefreshTimer() {
@@ -635,7 +617,7 @@ public class ChatPage extends JFrame {
     
     @Override
     public void dispose() {
-        WebSocketService.disconnect();
+        // Stop the timer when the window is closed
         stopOnlineUsersRefreshTimer();
         super.dispose();
     }

@@ -2,24 +2,16 @@ package page;
 
 import components.customs.ButtonCustom;
 import config.Authentication;
-import dto.request.ApiRequest;
-import dto.request.AuthenticateRequest;
 import dto.response.ApiResponse;
 import dto.response.UserResponse;
 import models.User;
 import services.AuthService;
-import services.WebSocketService;
 import utils.ThemeUtil;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.Socket;
-
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 public class LoginPage extends JFrame implements ActionListener {
     private JTextField usernameField;
@@ -112,9 +104,6 @@ public class LoginPage extends JFrame implements ActionListener {
                         .build());
                         
                 JOptionPane.showMessageDialog(this, "Login successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-                WebSocketService.connect();
-                
                 // redirect to main chat page
                 new ChatPage().setVisible(true);
                 this.dispose();
