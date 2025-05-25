@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
 
+import models.Chat;
 import dto.request.ChatRequest;
 import dto.response.ChatResponse;
 import repository.ChatRepository;
@@ -89,7 +90,7 @@ public class ChatRepositoryImpl implements ChatRepository {
     }
 
     @Override
-    public ChatResponse findById(String id) {
+    public Chat findById(String id) {
         try (Connection connection = ConnectionUtil.getConnection();
             Statement statement = connection.createStatement()) {
 
@@ -97,10 +98,12 @@ public class ChatRepositoryImpl implements ChatRepository {
             var resultSet = statement.executeQuery(sql);
 
             if (resultSet.next()) {
-                return ChatResponse.builder()
+                return Chat.builder()
                         .id(resultSet.getString("id"))
                         .name(resultSet.getString("name"))
                         .isGroup(resultSet.getBoolean("is_group"))
+                        .createdAt(resultSet.getTimestamp("created_at").toLocalDateTime())
+                        .updatedAt(resultSet.getTimestamp("updated_at").toLocalDateTime())
                         .build();
             }
 

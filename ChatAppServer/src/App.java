@@ -1,22 +1,20 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Map;
 
 import config.Authentication;
 import controllers.AuthController;
+import controllers.ChatController;
+import controllers.MessageController;
 import dto.request.ApiRequest;
-import dto.request.AuthenticateRequest;
-import models.User;
+import dto.response.ApiResponse;
 
 public class App {
     private static AuthController authController = new AuthController();
+    private static ChatController chatController = new ChatController();
+    private static MessageController messageController = new MessageController();
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(8080)) {
@@ -43,22 +41,49 @@ public class App {
             ApiRequest request = (ApiRequest) objectIn.readObject();
             System.out.println("Request: " + request.getMethod() + " " + request.getUrl());
 
-            if (request.getMethod().equals("POST") && request.getUrl().equals("/login")) {
-                objectOut.writeObject(authController.handleLogin(request.getPayload()));
-            } 
-            else if (request.getMethod().equals("POST") && request.getUrl().equals("/register")) {
-                // Handle registration logic here
-                // For now, just send a placeholder response
-                objectOut.writeObject("Registration endpoint not implemented yet");
-            } 
-            else if (request.getMethod().equals("GET") && request.getUrl().equals("/users")) {
-                // Handle fetching users logic here
-                // For now, just send a placeholder response
-                objectOut.writeObject("Fetch users endpoint not implemented yet");
-            }            
-            else {
-                objectOut.writeObject("Unsupported operation");
-                objectOut.flush();
+            
+            String method = request.getMethod();
+            String url = request.getUrl();
+
+            switch (method) {
+                case "POST":
+                    switch (url) {
+                        case "/auth/login":
+                            objectOut.writeObject(authController.handleLogin(request.getPayload()));
+                            break;
+                        case "/auth/logout":
+                            objectOut.writeObject(authController.handleLogout());
+                            break;
+                        case "/auth/register":
+                            objectOut.writeObject(authController.handleRegister(request.getPayload()));
+                            break;
+                        case "/chats":
+                            objectOut.writeObject(chatController.createChat(request.getPayload()));
+                            break;
+                        case "/messages":
+                            objectOut.writeObject(messageController.handleSendMessage(request.getPayload()));
+                            break;
+                        default:
+                            objectOut.writeObject("Unsupported POST URL");
+                            break;
+                    }
+                    break;
+                case "GET":
+                    switch (url) {
+                        case "/chats/mychats":
+                            objectOut.writeObject(chatController.getMyChats());
+                            break;
+                        case "/users/online":
+                            objectOut.writeObject(authController.getAllUsersOnline());
+                            break;
+                        default:
+                            objectOut.writeObject("Unsupported GET URL");
+                            break;
+                    }
+                    break;
+                default:
+                    objectOut.writeObject("Unsupported method");
+                    break;
             }
 
             // Close streams and socket properly

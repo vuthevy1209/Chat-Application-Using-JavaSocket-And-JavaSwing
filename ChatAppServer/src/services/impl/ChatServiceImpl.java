@@ -18,6 +18,7 @@ import services.ChatService;
 import java.util.List;
 import java.util.UUID;
 import java.util.ArrayList;
+import config.Authentication;
 
 public class ChatServiceImpl implements ChatService {
     private final ChatRepository chatRepository = new ChatRepositoryImpl();
@@ -77,9 +78,32 @@ public class ChatServiceImpl implements ChatService {
             return null;
         }
 
-        ChatResponse chat = chatRepository.findById(id);
+        Chat chat = chatRepository.findById(id);
+        return convertToChatResponse(chat);
+    }
 
-        List<String> participantIds = chatParticipantRepository.findAllByChatId(id);
+    @Override
+    public List<ChatResponse> getAllMyChats() {
+        String userId = Authentication.getUser().getId();
+        List<String> chatIds = chatParticipantRepository.findAllByUserId(userId);
+
+        List<ChatResponse> chats = new ArrayList<>();
+
+        for (String chatId : chatIds) {
+            Chat chat = chatRepository.findById(chatId);
+            if (chat != null) {
+                ChatResponse chatResponse = convertToChatResponse(chat);
+                if (chatResponse != null) {
+                    chats.add(chatResponse);
+                }
+            }
+        }
+
+        return chats;
+    }
+
+    private ChatResponse convertToChatResponse(Chat chat) {
+        List<String> participantIds = chatParticipantRepository.findAllByChatId(chat.getId());
         List<UserResponse> participants = new ArrayList<>();
         for (String participantId : participantIds) {
             UserResponse user = userRepository.findById(participantId);
@@ -88,7 +112,7 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        List<MessageResponse> messages = messageRepository.findAllByChatId(id);
+        List<MessageResponse> messages = messageRepository.findAllByChatId(chat.getId());
         for (MessageResponse message : messages) {
             UserResponse sender = userRepository.findById(message.getSenderId());
             message.setSenderUsername(sender.getUsername());
@@ -102,12 +126,16 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        chat.setParticipants(participants);
-        chat.setMessages(messages);
-        chat.setLastMessage(lastMessage);
-        chat.setUnreadCount(unreadCount);
-
-        return chat;
+        return ChatResponse.builder()
+                .id(chat.getId())
+                .name(chat.getName())
+                .isGroup(chat.isGroup())
+                .createdAt(chat.getCreatedAt())
+                .updatedAt(chat.getUpdatedAt())
+                .participants(participants)
+                .messages(messages)
+                .lastMessage(lastMessage)
+                .unreadCount(unreadCount)
+                .build();
     }
-
 }

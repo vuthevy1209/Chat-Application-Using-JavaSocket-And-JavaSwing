@@ -49,6 +49,25 @@ public class ChatParticipantRepositoryImpl implements ChatParticipantRepository 
     }
 
     @Override
+    public List<String> findAllByUserId(String userId) {
+        try (Connection connection = ConnectionUtil.getConnection();
+             Statement statement = connection.createStatement()) {
+
+            String sql = "SELECT chat_id FROM chat_participants WHERE user_id = '" + userId + "'";
+            ResultSet resultSet = statement.executeQuery(sql);
+            List<String> chatIds = new ArrayList<>();
+
+            while (resultSet.next()) {
+                chatIds.add(resultSet.getString("chat_id"));
+            }
+            return chatIds;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
     public boolean isParticipant(String userId, String chatId) {
         try (Connection connection = ConnectionUtil.getConnection();
              Statement statement = connection.createStatement()) {

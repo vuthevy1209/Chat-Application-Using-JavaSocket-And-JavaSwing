@@ -1,9 +1,10 @@
 package services.impl;
 
 import services.UserService;
-
-import dto.request.UserRequest;
+import config.Authentication;
+import dto.request.RegisterRequest;
 import dto.response.UserResponse;
+import models.User;
 import repository.UserRepository;
 import repository.impl.UserRepositoryImpl;
 
@@ -13,7 +14,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository = new UserRepositoryImpl();
 
     @Override
-    public boolean createUser(UserRequest userRequest) {
+    public boolean registerUser(RegisterRequest userRequest) {
         // Check if the user already exists
         if (userRepository.existsByUsername(userRequest.getUsername())) {
             return false;
@@ -26,7 +27,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean updateUser(UserRequest userRequest) {
+    public boolean updateUser(RegisterRequest userRequest) {
         if (!userRepository.existsById(userRequest.getId())) {
             return false;
         }
@@ -54,8 +55,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean login(String username, String password) {
+    public UserResponse login(String username, String password) {
         return userRepository.login(username, password);
+    }
+
+    @Override 
+    public boolean logout() {
+        try {
+            Authentication.getUserOnlines().remove(Authentication.getUser());
+            Authentication.setUser(null);
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+
+        }
     }
 
 }

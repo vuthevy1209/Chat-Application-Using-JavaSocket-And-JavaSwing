@@ -10,7 +10,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import dto.request.UserRequest;
+import dto.request.RegisterRequest;
 import dto.response.UserResponse;
 import models.User;
 
@@ -113,7 +113,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public boolean save(UserRequest user) {
+    public boolean save(RegisterRequest user) {
         String generatedId = UUID.randomUUID().toString();
         String hashedPassword = String.valueOf(user.getPassword().hashCode());
 
@@ -136,7 +136,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public boolean update(UserRequest user) {
+    public boolean update(RegisterRequest user) {
         try (Connection connection = ConnectionUtil.getConnection();
              Statement statement = connection.createStatement()) {
 
@@ -165,7 +165,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public boolean login(String username, String password) {
+    public UserResponse login(String username, String password) {
 
         try (Connection connection = ConnectionUtil.getConnection();
              Statement statement = connection.createStatement()) {
@@ -180,17 +180,24 @@ public class UserRepositoryImpl implements UserRepository {
                         .email(resultSet.getString("email"))
                         .avatarPath(resultSet.getString("avatar_path"))
                         .build();
-                
+
+                // Set the authenticated user in the Authentication context
                 Authentication.setUser(user);
-                return true;
+                Authentication.getUserOnlines().add(user);
+
+                return UserResponse.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .avatarPath(user.getAvatarPath())
+                        .build();
             } else {
-                // User does not exist or password does not match
-                return false;
+                return null;
             }
             
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+            return null;
         }
     }
 

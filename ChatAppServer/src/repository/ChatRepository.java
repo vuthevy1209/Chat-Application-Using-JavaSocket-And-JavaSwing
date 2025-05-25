@@ -1,7 +1,7 @@
 package repository;
 
 import dto.request.ChatRequest;
-import dto.response.ChatResponse;
+import models.Chat;
 
 public interface ChatRepository {
     public boolean existsById(String id);
@@ -14,5 +14,5 @@ public interface ChatRepository {
 
     public boolean delete(String id);
 
-    public ChatResponse findById(String id);
+    public Chat findById(String id);
 }

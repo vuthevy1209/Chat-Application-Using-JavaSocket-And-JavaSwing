@@ -8,5 +8,7 @@ public interface ChatParticipantRepository {
 
     public List<String> findAllByChatId(String chatId);
 
+    public List<String> findAllByUserId(String userId);
+
     public boolean isParticipant(String userId, String chatId);
 }

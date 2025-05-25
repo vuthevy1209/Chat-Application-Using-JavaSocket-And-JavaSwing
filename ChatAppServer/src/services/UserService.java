@@ -1,12 +1,12 @@
 package services;
 
-import dto.request.UserRequest;
+import dto.request.RegisterRequest;
 import dto.response.UserResponse;
 
 public interface UserService {
-    public boolean createUser(UserRequest userRequest);
+    public boolean registerUser(RegisterRequest userRequest);
 
-    public boolean updateUser(UserRequest userRequest);
+    public boolean updateUser(RegisterRequest userRequest);
 
     public boolean deleteUser(String id);
 
@@ -14,5 +14,7 @@ public interface UserService {
 
     public UserResponse getUserByUsername(String username);
 
-    public boolean login(String username, String password);
+    public UserResponse login(String username, String password);
+
+    public boolean logout();
 }

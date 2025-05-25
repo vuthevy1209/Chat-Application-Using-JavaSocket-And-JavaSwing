@@ -3,6 +3,9 @@ package services;
 import dto.request.ChatRequest;
 import dto.response.ChatResponse;
 
+import java.util.List;
+
+
 public interface ChatService {
     public boolean createChat(ChatRequest chatRequest);
 
@@ -11,4 +14,6 @@ public interface ChatService {
     public boolean deleteChat(String id);
 
     public ChatResponse getChatById(String id);
+
+    public List<ChatResponse> getAllMyChats();
 }
