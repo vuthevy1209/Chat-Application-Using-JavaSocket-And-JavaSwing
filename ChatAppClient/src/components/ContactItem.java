@@ -13,15 +13,13 @@ import java.awt.event.MouseEvent;
 
 public class ContactItem extends JPanel {
     private Chat chat;
-    private User user;
     private boolean isSelected;
     private Color defaultBackground;
     private Color hoverBackground;
     private Color selectedBackground;
     
-    public ContactItem(Chat chat, User user) {
+    public ContactItem(Chat chat) {
         this.chat = chat;
-        this.user = user;
         this.isSelected = false;
         this.defaultBackground = Color.WHITE;
         this.hoverBackground = new Color(245, 245, 245);
@@ -33,14 +31,14 @@ public class ContactItem extends JPanel {
         setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         // Avatar
-        AvatarPanel avatarPanel = new AvatarPanel(user, 40);
+        AvatarPanel avatarPanel = new AvatarPanel(chat.getName(), chat.getParticipants().get(0).getAvatarPath(), 40);
         add(avatarPanel, BorderLayout.WEST);
         
         // Contact info
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setOpaque(false);
-        
-        JLabel nameLabel = new JLabel(user.getUsername());
+
+        JLabel nameLabel = new JLabel(chat.getName());
         nameLabel.setFont(ThemeUtil.NORMAL_FONT);
         infoPanel.add(nameLabel, BorderLayout.CENTER);
         
@@ -83,9 +81,5 @@ public class ContactItem extends JPanel {
     public void setSelected(boolean selected) {
         this.isSelected = selected;
         setBackground(selected ? selectedBackground : defaultBackground);
-    }
-    
-    public Chat getChat() {
-        return chat;
     }
 }

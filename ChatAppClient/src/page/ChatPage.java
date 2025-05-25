@@ -5,23 +5,26 @@ import components.ContactItem;
 import components.DateSeparator;
 import components.OnlineUserItem;
 import components.customs.*;
+import dto.request.ApiRequest;
+import dto.request.MessageRequest;
+import dto.response.ApiResponse;
+import dto.response.ChatResponse;
+import dto.response.MessageResponse;
+import dto.response.UserResponse;
 import models.Message;
 import models.User;
-import page.ChatPage.ChatRefreshCallback;
 import models.Chat;
-import services.FakeDataService;
-import services.ChatService;
 import utils.IconUtil;
 import utils.ThemeUtil;
 
 import javax.swing.*;
+import java.awt.event.WindowAdapter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.event.MouseEvent;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,13 +36,19 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import config.Authentication;
+import converters.ChatConverter;
+import converters.UserConverter;
+import services.AuthService;
+import services.ChatService;
+import services.MessageService;
+import services.UserService;
+import services.WebSocketService;
+
+
 public class ChatPage extends JFrame {
-    private Socket socket;
-    private BufferedWriter out;
-    private BufferedReader in;
-    private User currentUser; // Current logged-in user
-    private Chat currentChat; // Current chat being viewed by the user
-    private services.ChatService chatService;
+    private Chat currentChat = null;
+    List<Chat> myChats = new ArrayList<>(); // List of chats for the user
     
     // UI Components
     private JPanel leftPanel;
@@ -62,10 +71,23 @@ public class ChatPage extends JFrame {
     
     public ChatPage() {
         setTitle("Chat App");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 700);
         setLocationRelativeTo(null);
         setMinimumSize(new Dimension(800, 500));
+
+        WebSocketService.connect();
+
+        // Add window listener to handle close operation
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                // Stop the timer to refresh online users
+                stopOnlineUsersRefreshTimer();
+                // Send logout request
+                AuthService.logout();
+                System.exit(0);
+            }
+        });
         
         // Create main layout
         setLayout(new BorderLayout());
@@ -81,9 +103,21 @@ public class ChatPage extends JFrame {
         add(rightPanel, BorderLayout.EAST);
         
         // Load initial chat if available
-        List<Chat> userChats = dataService.getUserChats();
-        if (!userChats.isEmpty()) {
-            loadChat(userChats.get(0));
+        ApiResponse response = (ApiResponse) UserService.getMyChats();
+            if (response.getCode().equals("200")) {
+                List<ChatResponse> chatResponses = (List<ChatResponse>) response.getData();
+                for (ChatResponse chatResponse : chatResponses) {
+                    Chat chat = ChatConverter.converterToChat(chatResponse);
+                    if (chat != null) {
+                        myChats.add(chat);
+                    }
+                }
+            } else {
+                System.err.println("Failed to load chats: " + response.getMessage());
+            }
+
+        if (!myChats.isEmpty()) {
+            loadChat(myChats.get(0));
         }
         
         // Start the timer to refresh online users
@@ -129,19 +163,16 @@ public class ChatPage extends JFrame {
         JButton logoutButton = ButtonCustom.createButtonCustom("Log out", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR);
         
         logoutButton.addActionListener(e -> {
-            // Logout from fake data service
-            dataService.logout();
-            
-            // Logout from socket service if available
-            if (chatService != null) {
-                chatService.logout();
+            ApiResponse response = AuthService.logout();
+            if (response.getCode().equals("200")) {
+                System.out.println("Logout successful");
+                // redirect to login page
+                new LoginPage().setVisible(true);
+                this.dispose();
+            } else {
+                System.err.println("Logout failed: " + response.getMessage());
             }
-            
-            LoginPage loginPage = new LoginPage();
-            loginPage.setVisible(true);
-            this.dispose();
         });
-        
         
         footerPanel.add(logoutButton);
         
@@ -279,15 +310,23 @@ public class ChatPage extends JFrame {
     
     private void loadChatList() {
         chatListPanel.removeAll();
+        myChats.clear();
         
-        List<Chat> userChats = dataService.getUserChats();
-        
-        // Debug information
-        System.out.println("Loading chat list. Current user: " + 
-                          (currentUser != null ? currentUser.getUsername() : "null") + 
-                          ", Number of chats: " + userChats.size());
-        
-        if (userChats.isEmpty()) {
+        ApiResponse response = (ApiResponse) UserService.getMyChats();
+
+        if (response.getCode().equals("200")) {
+            List<ChatResponse> chatResponses = (List<ChatResponse>) response.getData();
+            for (ChatResponse chatResponse : chatResponses) {
+                Chat chat = ChatConverter.converterToChat(chatResponse);
+                if (chat != null) {
+                    myChats.add(chat);
+                }
+            }
+        } else {
+            System.err.println("Failed to load chats: " + response.getMessage());
+        }
+
+        if (myChats.isEmpty()) {
             // Display a message when no chats are available
             JLabel noChatsLabel = new JLabel("No conversations yet");
             noChatsLabel.setFont(ThemeUtil.NORMAL_FONT);
@@ -297,67 +336,51 @@ public class ChatPage extends JFrame {
             chatListPanel.add(noChatsLabel);
             chatListPanel.add(Box.createVerticalStrut(20));
         } else {
-            for (Chat chat : userChats) {
-                User chatUser;
-                
-                if (chat.isGroup()) {
-                    // For group chats, use the chat name
-                    chatUser = new User(chat.getId(), chat.getName(), "", "");
-                } else {
-                    // For direct chats, find the other user
-                    String otherUserId = chat.getParticipantIds().stream()
-                        .filter(id -> !id.equals(currentUser.getId()))
-                        .findFirst()
-                        .orElse("");
+            for (Chat chat : myChats) {
+
+                ContactItem contactItem = new ContactItem(chat);
+                contactItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
                     
-                    chatUser = dataService.getUserById(otherUserId);
+                // Set selected if this is the current chat
+                if (currentChat != null && chat.getId().equals(currentChat.getId())) {
+                    contactItem.setSelected(true);
                 }
-                
-                if (chatUser != null) {
-                    ContactItem contactItem = new ContactItem(chat, chatUser);
-                    contactItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
                     
-                    // Set selected if this is the current chat
-                    if (currentChat != null && chat.getId().equals(currentChat.getId())) {
-                        contactItem.setSelected(true);
-                    }
-                    
-                    /*
-                    Đoạn code này xử lý sự kiện khi người dùng nhấp chuột vào một liên hệ (contact) trong danh sách chat. Cụ thể:
-                    @Override public void mouseClicked(MouseEvent e) - Ghi đè phương thức mouseClicked từ MouseAdapter để xử lý sự kiện khi người dùng nhấp chuột vào contactItem
-                    // Deselect all contacts - Bỏ chọn tất cả các liên hệ trước đó:
-                    Duyệt qua tất cả các component trong chatListPanel
-                    Kiểm tra nếu component là một ContactItem
-                    Gọi setSelected(false) để bỏ chọn nó (loại bỏ hiệu ứng được chọn)
-                    // Select this contact - Chọn liên hệ vừa được nhấp:
+                /*
+                Đoạn code này xử lý sự kiện khi người dùng nhấp chuột vào một liên hệ (contact) trong danh sách chat. Cụ thể:
+                @Override public void mouseClicked(MouseEvent e) - Ghi đè phương thức mouseClicked từ MouseAdapter để xử lý sự kiện khi người dùng nhấp chuột vào contactItem
+                // Deselect all contacts - Bỏ chọn tất cả các liên hệ trước đó:
+                Duyệt qua tất cả các component trong chatListPanel
+                Kiểm tra nếu component là một ContactItem
+                Gọi setSelected(false) để bỏ chọn nó (loại bỏ hiệu ứng được chọn)
+                // Select this contact - Chọn liên hệ vừa được nhấp:
 
-                    Gọi setSelected(true) trên contactItem hiện tại
-                    Điều này tạo hiệu ứng trực quan để người dùng biết đang chọn cuộc trò chuyện nào
-                    // Load chat - Tải cuộc trò chuyện đã chọn:
+                Gọi setSelected(true) trên contactItem hiện tại
+                Điều này tạo hiệu ứng trực quan để người dùng biết đang chọn cuộc trò chuyện nào
+                // Load chat - Tải cuộc trò chuyện đã chọn:
 
-                    Gọi phương thức loadChat(chat) để hiển thị tin nhắn của cuộc trò chuyện đó trong cửa sổ chính
-                    Cập nhật tiêu đề, nội dung tin nhắn và các thành phần liên quan
-                     */
-                    contactItem.addMouseListener(new MouseAdapter() {
-                        @Override
-                        public void mouseClicked(MouseEvent e) {
-                            // Deselect all contacts
-                            for (Component comp : chatListPanel.getComponents()) {
-                                if (comp instanceof ContactItem) {
-                                    ((ContactItem) comp).setSelected(false);
-                                }
+                Gọi phương thức loadChat(chat) để hiển thị tin nhắn của cuộc trò chuyện đó trong cửa sổ chính
+                Cập nhật tiêu đề, nội dung tin nhắn và các thành phần liên quan
+                    */
+                contactItem.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        // Deselect all contacts
+                        for (Component comp : chatListPanel.getComponents()) {
+                            if (comp instanceof ContactItem) {
+                                ((ContactItem) comp).setSelected(false);
                             }
-                            
-                            // Select this contact
-                            contactItem.setSelected(true);
-                            
-                            // Load chat
-                            loadChat(chat);
                         }
-                    });
-                    
-                    chatListPanel.add(contactItem);
-                }
+                        
+                        // Select this contact
+                        contactItem.setSelected(true);
+                        
+                        // Load chat
+                        loadChat(chat);
+                    }
+                });
+                
+                chatListPanel.add(contactItem);
             }
         }
         
@@ -367,41 +390,35 @@ public class ChatPage extends JFrame {
     
     private void loadOnlineUsers() {
         onlineUsersPanel.removeAll();
+
+        List<User> onlineUsers = new ArrayList<>();
         
-        if (chatService != null) {
-            // Lấy danh sách người dùng online từ server
-            chatService.getOnlineUsers(onlineUsers -> {
-                // Lọc danh sách để loại bỏ người dùng hiện tại
-                List<User> filteredUsers = new ArrayList<>();
-                for (User user : onlineUsers) {
-                    // Chỉ thêm vào danh sách nếu không phải là người dùng hiện tại
-                    if (!user.getId().equals(currentUser.getId())) {
-                        filteredUsers.add(user);
-                    }
-                }
-                
-                // Hiển thị danh sách người dùng online (trừ bản thân)
-                for (User user : filteredUsers) {
-                    OnlineUserItem userItem = new OnlineUserItem(user, new ChatRefreshCallback() {
-                        @Override
-                        public void refreshChatList() {
-                            loadChatList();
-                        }
-                    });
-                    userItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-                    
-                    onlineUsersPanel.add(userItem);
-                }
-                
-                // Cập nhật giao diện
-                onlineUsersPanel.revalidate();
-                onlineUsersPanel.repaint();
-            });
+        ApiResponse response = (ApiResponse) UserService.getOnlineUsers();
+        if (response.getCode().equals("200")) {
+            List<UserResponse> userResponses = (List<UserResponse>) response.getData();
+            for (UserResponse userResponse : userResponses) {
+                onlineUsers.add(UserConverter.converterToUser(userResponse));
+            }
         } else {
-            // Nếu không có kết nối socket, sử dụng fake data
-            List<User> onlineUsers = dataService.getOnlineUsers();
-            
+            System.err.println("Failed to load online users: " + response.getMessage());
+        }
+
+        if (onlineUsers.isEmpty()) {
+            // Display a message when no chats are available
+            JLabel noUserOnlineLabel = new JLabel("No users online");
+            noUserOnlineLabel.setFont(ThemeUtil.NORMAL_FONT);
+            noUserOnlineLabel.setForeground(Color.GRAY);
+            noUserOnlineLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            onlineUsersPanel.add(Box.createVerticalStrut(20));
+            onlineUsersPanel.add(noUserOnlineLabel);
+            onlineUsersPanel.add(Box.createVerticalStrut(20));
+        } else {
             for (User user : onlineUsers) {
+                if (user.getId().equals(Authentication.getUser().getId())) {
+                    // Skip current user
+                    continue;
+                }
+
                 OnlineUserItem userItem = new OnlineUserItem(user, new ChatRefreshCallback() {
                     @Override
                     public void refreshChatList() {
@@ -412,36 +429,17 @@ public class ChatPage extends JFrame {
                 
                 onlineUsersPanel.add(userItem);
             }
-            
-            onlineUsersPanel.revalidate();
-            onlineUsersPanel.repaint();
         }
+            
+        onlineUsersPanel.revalidate();
+        onlineUsersPanel.repaint();
     }
     
     private void loadChat(Chat chat) {
         currentChat = chat;
         
         // Update chat name in header
-        if (chat.isGroup()) {
-            currentChatNameLabel.setText(chat.getName());
-        } else {
-            /*
-             * chat.getParticipantIds() - Lấy danh sách ID của tất cả người tham gia trong cuộc trò chuyện
-             * .stream() - Chuyển danh sách thành luồng dữ liệu để xử lý
-             * .filter(id -> !id.equals(currentUser.getId())) - Lọc ra các ID khác với ID của người dùng hiện tại (loại bỏ ID của chính mình)
-             * .findFirst() - Lấy ID đầu tiên từ kết quả lọc (trong trò chuyện 1-1, sẽ chỉ có một ID khác) 
-             * .orElse("") - Trả về chuỗi rỗng nếu không tìm thấy ID nào (trường hợp hiếm)
-             */
-            String otherUserId = chat.getParticipantIds().stream()
-                .filter(id -> !id.equals(currentUser.getId()))
-                .findFirst()
-                .orElse("");
-            
-            User otherUser = dataService.getUserById(otherUserId);
-            if (otherUser != null) {
-                currentChatNameLabel.setText(otherUser.getUsername());
-            }
-        }
+        currentChatNameLabel.setText(chat.getName());
         
         // Clear messages panel
         messagesPanel.removeAll();
@@ -454,10 +452,10 @@ public class ChatPage extends JFrame {
         LocalDateTime today = LocalDateTime.now();
         String todayStr = today.format(dateFormatter);
         String yesterdayStr = today.minusDays(1).format(dateFormatter);
-        
+
         // Group messages by date
         for (Message message : chat.getMessages()) {
-            String dateStr = message.getTimestamp().format(dateFormatter);
+            String dateStr = message.getCreatedAt().format(dateFormatter);
             
             // Convert date to more readable format for display
             String displayDate;
@@ -469,31 +467,36 @@ public class ChatPage extends JFrame {
                 displayDate = dateStr;
             }
             
-            // Add to map
-            /*
-            Map<String, List<String>> map = new HashMap<>();
-
-            // Sử dụng computeIfAbsent để khởi tạo danh sách
-            map.computeIfAbsent("A", key -> new ArrayList<>()).add("Apple");
-            map.computeIfAbsent("B", key -> new ArrayList<>()).add("Banana");
-
-            System.out.println(map); // Output: {A=[Apple], B=[Banana]}
-             */
             messagesByDate.computeIfAbsent(displayDate, key -> new ArrayList<>()).add(message);
         }
-        
-        // Sort dates chronologically
-        // Kết quả là một danh sách đã sắp xếp theo thứ tự: các ngày trong quá khứ → Yesterday → Today. 
-        // Điều này đảm bảo rằng tin nhắn cũ nhất hiển thị trước, sau đó là Yesterday và cuối cùng là Today, tạo ra trải nghiệm đọc tin nhắn theo thứ tự thời gian từ cũ đến mới.
+
+        // Sort messages within each date group by time (oldest first for display)
+        for (List<Message> messages : messagesByDate.values()) {
+            messages.sort((m1, m2) -> m1.getCreatedAt().compareTo(m2.getCreatedAt()));
+        }
+
         List<String> sortedDates = new ArrayList<>(messagesByDate.keySet());
         sortedDates.sort((d1, d2) -> {
-            if (d1.equals("Today")) return 1; // Nếu ngày thứ nhất là "Today", nó sẽ được xếp sau (lớn hơn) tất cả các ngày khác
-            if (d2.equals("Today")) return -1; // Nếu ngày thứ hai là "Today", nó sẽ được xếp sau tất cả các ngày khác
-            if (d1.equals("Yesterday")) return 1; // Nếu ngày thứ nhất là "Yesterday", nó cũng được xếp sau các ngày khác, nhưng trước "Today"
-            if (d2.equals("Yesterday")) return -1; // Nếu ngày thứ hai là "Yesterday", nó cũng được xếp sau các ngày khác, nhưng trước "Today"
-            return d1.compareTo(d2); // Các ngày còn lại được sắp xếp theo thứ tự bảng chữ cái (lexicographically)
+            // Handle special cases for "Today" and "Yesterday"
+            if (d1.equals("Today") && d2.equals("Yesterday")) return 1;  // Today after Yesterday
+            if (d1.equals("Yesterday") && d2.equals("Today")) return -1; // Yesterday before Today
+            if (d1.equals("Today")) return 1;  // Today is latest (last in list)
+            if (d2.equals("Today")) return -1;
+            if (d1.equals("Yesterday")) return 1;  // Yesterday comes after other dates
+            if (d2.equals("Yesterday")) return -1;
+
+            // Convert date strings to LocalDate for comparison
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy");
+                LocalDate date1 = LocalDate.parse(d1, formatter);
+                LocalDate date2 = LocalDate.parse(d2, formatter);
+                return date1.compareTo(date2);  // Sort by actual date (oldest first)
+            } catch (Exception e) {
+                // Fallback to string comparison if parsing fails
+                return d1.compareTo(d2);
+            }
         });
-        
+
         // Add messages by date groups
         for (String date : sortedDates) {
             // Add date separator
@@ -502,7 +505,7 @@ public class ChatPage extends JFrame {
             // Add messages for this date
             List<Message> messages = messagesByDate.get(date);
             for (Message message : messages) {
-                boolean isSent = message.getSenderId().equals(currentUser.getId());
+                boolean isSent = message.getSenderId().equals(Authentication.getUser().getId());
                 ChatBubble bubble = new ChatBubble(message, isSent);
                 messagesPanel.add(bubble);
             }
@@ -560,18 +563,46 @@ public class ChatPage extends JFrame {
         if (content.isEmpty()) {
             return;
         }
-        
-        // Send message
-        dataService.sendMessage(currentChat.getId(), content);
-        
-        // Clear input field
-        messageField.setText("");
-        
-        // Reload chat
-        loadChat(currentChat);
-        
-        // Reload chat list to update last message preview
-        loadChatList();
+
+        MessageRequest messageRequest = MessageRequest.builder()
+            .senderId(Authentication.getUser().getId())
+            .chatId(currentChat.getId())
+            .content(content)
+            .messageType("TEXT")
+            .requestType("CREATE")
+            .build();
+
+        ApiResponse response = MessageService.sendMessage(messageRequest);
+        if (response.getCode().equals("200")) {
+            // Clear input field
+            messageField.setText("");
+
+            // Reload chat
+            ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
+            Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
+            loadChat(chat);
+
+            // Reload chat list to update last message preview
+            loadChatList();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to send message: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("Failed to send message: " + response.getMessage());
+        }
+    }
+
+    public void onMessageReceived(MessageResponse message) {
+        SwingUtilities.invokeLater(() -> {
+            // Check if message belongs to current chat
+            if (currentChat != null && message.getChatId().equals(currentChat.getId())) {
+                // Add message to current chat and refresh
+                // You'll need to convert MessageResponse to Message and add to chat                
+                // Refresh the chat display
+                loadChat(currentChat);
+            }
+            
+            // Always refresh chat list to update last message preview
+            loadChatList();
+        });
     }
     
     // Timer to periodically refresh online users
@@ -604,7 +635,7 @@ public class ChatPage extends JFrame {
     
     @Override
     public void dispose() {
-        // Stop the timer when the window is closed
+        WebSocketService.disconnect();
         stopOnlineUsersRefreshTimer();
         super.dispose();
     }

@@ -7,6 +7,8 @@ import dto.request.AuthenticateRequest;
 import dto.response.ApiResponse;
 import dto.response.UserResponse;
 import models.User;
+import services.AuthService;
+import services.WebSocketService;
 import utils.ThemeUtil;
 
 import javax.swing.*;
@@ -98,53 +100,29 @@ public class LoginPage extends JFrame implements ActionListener {
                 return;
             }
 
-            try (Socket socket = new Socket("localhost", 8080)) {
-                ObjectOutputStream outObject = new ObjectOutputStream(socket.getOutputStream());
-                outObject.flush();
-                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            ApiResponse response = AuthService.login(username, password);
 
-                ApiRequest request = ApiRequest.builder()
-                        .method("POST")
-                        .url("/login")
-                        .payload(AuthenticateRequest.builder()
-                                .username(username)
-                                .password(password)
-                                .build())
-                        .build();
+            if (response.getCode().equals("200")) {
+                UserResponse userResponse = (UserResponse) response.getData();
+                Authentication.setUser(User.builder()
+                        .id(userResponse.getId())
+                        .username(userResponse.getUsername())
+                        .email(userResponse.getEmail())
+                        .avatarPath(userResponse.getAvatarPath())
+                        .build());
+                        
+                JOptionPane.showMessageDialog(this, "Login successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
 
-                // Send the request
-                outObject.writeObject(request);
-                outObject.flush();
-
-                // Read the response
-                ApiResponse response = (ApiResponse) in.readObject();
-
-                System.out.println("Response Code: " + response.getCode());
-                System.out.println("Response Message: " + response.getMessage());
-
-                if (response.getCode().equals("200")) {
-                    UserResponse userResponse = (UserResponse) response.getData();
-                    Authentication.setUser(User.builder()
-                            .id(userResponse.getId())
-                            .username(userResponse.getUsername())
-                            .email(userResponse.getEmail())
-                            .avatarPath(userResponse.getAvatarPath())
-                            .build());
-                            
-                    JOptionPane.showMessageDialog(this, "Login successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-                    // redirect to main chat page
-                } else {
-                    // Login failed, show error message
-                    JOptionPane.showMessageDialog(this, response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                }
-
-                // Close streams
-                outObject.close();
-                in.close();
-                socket.close();
-            } catch (IOException | ClassNotFoundException ex) {
-                ex.printStackTrace();
+                WebSocketService.connect();
+                
+                // redirect to main chat page
+                new ChatPage().setVisible(true);
+                this.dispose();
+            } else {
+                // Login failed, show error message
+                JOptionPane.showMessageDialog(this, response.getMessage(), "Login Failed", JOptionPane.ERROR_MESSAGE);
             }
+
         } else if (e.getSource() == registerButton) {
             // Open register page
             RegisterPage registerPage = new RegisterPage();

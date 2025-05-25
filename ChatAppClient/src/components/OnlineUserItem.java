@@ -3,16 +3,23 @@ package components;
 import models.Chat;
 import models.User;
 import page.ChatPage.ChatRefreshCallback;
-import services.FakeDataService;
+import services.ChatService;
 import utils.IconUtil;
 import utils.ThemeUtil;
 import components.customs.AvatarPanel;
+import config.Authentication;
+import dto.request.ApiRequest;
+import dto.request.ChatRequest;
+import dto.response.ApiResponse;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.UUID;
+import java.net.Socket;
+import java.util.List;
 
 public class OnlineUserItem extends JPanel {
     private User user;
@@ -28,7 +35,7 @@ public class OnlineUserItem extends JPanel {
         setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         // Avatar
-        AvatarPanel avatarPanel = new AvatarPanel(user, 40);
+        AvatarPanel avatarPanel = new AvatarPanel(user.getUsername(), user.getAvatarPath(), 40);
         add(avatarPanel, BorderLayout.WEST);
         
         // User name
@@ -50,56 +57,26 @@ public class OnlineUserItem extends JPanel {
     }
     
     private void createNewChat() {
-        FakeDataService dataService = FakeDataService.getInstance();
-        User currentUser = dataService.getCurrentUser();
-        
-        if (currentUser != null && user != null) {
-            // Check if a chat between these users already exists
-            boolean chatExists = false;
-            for (Chat chat : dataService.getUserChats()) {
-                if (!chat.isGroup() && chat.getParticipantIds().contains(user.getId()) && chat.getParticipantIds().size() == 2) {
-                    chatExists = true;
-                    break;
-                }
+        List<String> participantIds = List.of(Authentication.getUser().getId(), user.getId());
+
+        ChatRequest chatRequest = ChatRequest.builder()
+            .name(user.getUsername())
+            .isGroup(false)
+            .participantIds(participantIds)
+            .requestType("create")
+            .build();
+
+        ApiResponse response = (ApiResponse) ChatService.createChat(chatRequest);
+
+        if (response.getCode().equals("200")) {
+            if (refreshCallback != null) {
+                refreshCallback.refreshChatList();
             }
-            
-            // If chat doesn't exist, create a new one
-            if (!chatExists) {
-                // Try to get ChatService
-                services.ChatService chatService = null;
-                try {
-                    Class<?> appClass = Class.forName("App");
-                    java.lang.reflect.Method getChatServiceMethod = appClass.getMethod("getChatService");
-                    chatService = (services.ChatService) getChatServiceMethod.invoke(null);
-                } catch (Exception ex) {
-                    System.err.println("Could not get ChatService from App: " + ex.getMessage());
-                }
-                
-                // Create new chat using fake data service (in real implementation, this would use socket server)
-                String chatId = UUID.randomUUID().toString();
-                Chat newChat = new Chat(chatId, user.getUsername(), false);
-                newChat.addParticipant(currentUser.getId());
-                newChat.addParticipant(user.getId());
-                
-                // Add the new chat to the data service
-                dataService.addChat(newChat);
-                
-                // If we have socket connection, we'd create the chat on the server too
-                if (chatService != null && chatService.isConnected()) {
-                    // This would be the place to create chat on server
-                    // For now, we're just using the local fake data service
-                }
-                
-                // Refresh the chat list in the UI
-                if (refreshCallback != null) {
-                    refreshCallback.refreshChatList();
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, 
-                    "A chat with " + user.getUsername() + " already exists!", 
-                    "Chat Exists", 
-                    JOptionPane.INFORMATION_MESSAGE);
-            }
+        } else {
+            JOptionPane.showMessageDialog(this, 
+                "A chat with " + user.getUsername() + " already exists!", 
+                "Chat Exists", 
+                JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

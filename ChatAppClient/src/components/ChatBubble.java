@@ -6,6 +6,7 @@ import utils.ThemeUtil;
 
 import javax.swing.*;
 import java.awt.*;
+import java.time.format.DateTimeFormatter;
 
 public class ChatBubble extends JPanel {
     private Message message;
@@ -43,7 +44,7 @@ public class ChatBubble extends JPanel {
         contentPanel.setLayout(new BorderLayout(5, 5));
         
         // Create message text
-        JTextArea textArea = new JTextArea(message.getContent());
+        JTextArea textArea = new JTextArea(message.getContent()); 
         textArea.setEditable(false);
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
@@ -57,7 +58,8 @@ public class ChatBubble extends JPanel {
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
         statusPanel.setOpaque(false);
         
-        timeLabel = new JLabel(message.getFormattedTime());
+
+        timeLabel = new JLabel(message.getCreatedAt().format(DateTimeFormatter.ofPattern("HH:mm")));
         timeLabel.setFont(ThemeUtil.SMALL_FONT);
         timeLabel.setForeground(Color.DARK_GRAY);
         

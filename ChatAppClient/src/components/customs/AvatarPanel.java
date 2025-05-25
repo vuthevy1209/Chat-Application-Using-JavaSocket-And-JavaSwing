@@ -1,26 +1,29 @@
 package components.customs;
 
 import models.User;
+import utils.ThemeUtil;
+import utils.StringUtils;
 
 import javax.swing.*;
+
 import java.awt.*;
 
 public class AvatarPanel extends JPanel {
-    private User user;
     private int size;
+    private String username;
     private ImageIcon avatar;
     
-    public AvatarPanel(User user, int size) {
-        this.user = user;
+    public AvatarPanel(String username, String imagePath, int size) {
+        this.username = username;
         this.size = size;
         this.setPreferredSize(new Dimension(size, size));
         this.setMaximumSize(new Dimension(size, size));
         this.setMinimumSize(new Dimension(size, size));
         this.setOpaque(false);
-        
-        if (user.getAvatarPath() != null) {
+
+        if (imagePath != null) {
             try {
-                avatar = new ImageIcon(getClass().getResource(user.getAvatarPath()));
+                avatar = new ImageIcon(getClass().getResource(imagePath));
                 Image img = avatar.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
                 avatar = new ImageIcon(img);
             } catch (Exception e) {
@@ -36,7 +39,7 @@ public class AvatarPanel extends JPanel {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
         // Draw circle background
-        g2d.setColor(user.getAvatarColor());
+        g2d.setColor(ThemeUtil.generateAvatarColor(username));
         g2d.fillOval(0, 0, size, size);
         
         if (avatar != null) {
@@ -51,7 +54,7 @@ public class AvatarPanel extends JPanel {
             g2d.setColor(Color.WHITE);
             g2d.setFont(new Font("Arial", Font.BOLD, size / 2));
             FontMetrics fm = g2d.getFontMetrics();
-            String initials = user.getInitials();
+            String initials = StringUtils.getInitials(username);
             int textWidth = fm.stringWidth(initials);
             int textHeight = fm.getHeight();
             g2d.drawString(initials, (size - textWidth) / 2, (size + textHeight / 2) / 2);

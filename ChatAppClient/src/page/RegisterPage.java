@@ -1,25 +1,15 @@
 package page;
 
 import components.customs.ButtonCustom;
-import components.customs.TextFieldCustom;
-import dto.request.ApiRequest;
-import dto.request.AuthenticateRequest;
 import dto.request.RegisterRequest;
 import dto.response.ApiResponse;
+import services.AuthService;
 import utils.ThemeUtil;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
 
 public class RegisterPage extends JFrame implements ActionListener {
     private JTextField emailField;
@@ -117,49 +107,24 @@ public class RegisterPage extends JFrame implements ActionListener {
                 JOptionPane.showMessageDialog(this, "Please enter a valid email address", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
+            RegisterRequest registerRequest = RegisterRequest.builder()
+                    .email(email)
+                    .username(username)
+                    .password(password)
+                    .avatarPath("default_avatar.png") // Default avatar path
+                    .requestType("CREATE")
+                    .build();
             
-            try (Socket socket = new Socket("localhost", 8080)) {
-                ObjectOutputStream outObject = new ObjectOutputStream(socket.getOutputStream());
-                outObject.flush();
-                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            ApiResponse response = AuthService.register(registerRequest);
 
-                ApiRequest request = ApiRequest.builder()
-                        .method("POST")
-                        .url("/register")
-                        .payload(RegisterRequest.builder()
-                                .email(email)
-                                .username(username)
-                                .password(password)
-                                .avatarPath("default_avatar.png") // Default avatar path
-                                .requestType("CREATE")
-                                .build())
-                        .build();
-
-                // Send the request
-                outObject.writeObject(request);
-                outObject.flush();
-
-                // Read the response
-                ApiResponse response = (ApiResponse) in.readObject();
-
-                System.out.println("Response Code: " + response.getCode());
-                System.out.println("Response Message: " + response.getMessage());
-
-                if (response.getCode().equals("200")) {
-                    // redirect to login page
-                    JOptionPane.showMessageDialog(this, "Registration successful! Please login.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                    this.dispose();
-                    new LoginPage().setVisible(true);
-                } else {
-                    JOptionPane.showMessageDialog(this, response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                }
-
-                // Close streams
-                outObject.close();
-                in.close();
-                socket.close();
-            } catch (IOException | ClassNotFoundException ex) {
-                ex.printStackTrace();
+            if (response.getCode().equals("200")) {
+                // redirect to login page
+                JOptionPane.showMessageDialog(this, "Registration successful! Please login.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                this.dispose();
+                new LoginPage().setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
             
 
