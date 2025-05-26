@@ -52,6 +52,10 @@ import services.UserService;
 public class ChatPage extends JFrame {
     private Chat currentChat = null;
     List<Chat> myChats = new ArrayList<>(); // List of chats for the user
+    // Socket for communication with the server
+    Socket socket;
+    ObjectOutputStream outObject;
+    ObjectInputStream inObject;
     
     // UI Components
     private JPanel leftPanel;
@@ -73,6 +77,31 @@ public class ChatPage extends JFrame {
     }
     
     public ChatPage() {
+        try {
+            // Initialize socket connection
+            socket = new Socket("localhost", 12345);
+            outObject = new ObjectOutputStream(socket.getOutputStream());
+            outObject.flush();
+            inObject = new ObjectInputStream(socket.getInputStream());
+
+            // Thread nhận tin nhắn từ server
+            Thread receiveThread = new Thread(() -> {
+                try {
+                    while(true) {
+                        ApiResponse response = (ApiResponse) inObject.readObject();
+                        String s = (String) response.getData();
+                        System.out.println(s);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            receiveThread.start();
+        } catch (IOException e) {
+            System.err.println("Failed to connect to server 12345: " + e.getMessage());
+            return;
+        }
+
         setTitle("Chat App");
         setSize(1200, 700);
         setLocationRelativeTo(null);
@@ -449,16 +478,16 @@ public class ChatPage extends JFrame {
     }
     
     private void loadChat(Chat chat) {
-        
         currentChat = chat;
-        
+
         // Update chat name in header
         currentChatNameLabel.setText(chat.getName());
         
         // Clear messages panel
         messagesPanel.removeAll();
 
-
+        // setLayout 
+        messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
         
         // Group messages by date
         Map<String, List<Message>> messagesByDate = new HashMap<>();
@@ -588,8 +617,18 @@ public class ChatPage extends JFrame {
             .requestType("CREATE")
             .build();
 
-        ApiResponse response = MessageService.sendMessage(messageRequest);
-        if (response.getCode().equals("200")) {
+
+        try {
+            // Send message request to server
+            outObject.writeObject(ApiRequest.builder()
+                .method("POST")
+                .url("/messages")
+                .headers(Authentication.getUser().getId())
+                .payload(messageRequest)
+                .build());
+
+            outObject.flush();
+
             // Clear input field
             messageField.setText("");
 
@@ -597,14 +636,31 @@ public class ChatPage extends JFrame {
             ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
             Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
             loadChat(chat);
-
-            // Reload chat list to update  last message preview
-            loadChatList();
-        } else {
-            JOptionPane.showMessageDialog(this, "Failed to send message: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            System.err.println("Failed to send message: " + response.getMessage());
+            
+        } catch (IOException e) {
+            System.err.println("Failed to send message: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Failed to send message: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
+            // if (response.getCode().equals("200")) {
+            //     // Clear input field
+            //     messageField.setText("");
+
+            //     // Reload chat
+            //     ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
+            //     Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
+            //     loadChat(chat);
+
+            //     // Reload chat list to update  last message preview
+            //     loadChatList();
+            // } else {
+            //     JOptionPane.showMessageDialog(this, "Failed to send message: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            //     System.err.println("Failed to send message: " + response.getMessage());
+            // }
     }
+
+
     
     // Timer to periodically refresh online users
     private void startOnlineUsersRefreshTimer() {
