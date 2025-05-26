@@ -153,12 +153,30 @@ public class ChatPage extends JFrame {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16); // điều chỉnh độ nhạy của thanh cuộn (scrollbar) khi người dùng sử dụng chuột để cuộn. 
         
         // Footer
-        JPanel footerPanel = new JPanel(new GridLayout(1, 1, 10, 0));
-        footerPanel.setBackground(Color.WHITE);
+        User currentUser = Authentication.getUser();
+
+        JPanel footerPanel = new JPanel(new BorderLayout());
+        footerPanel.setBackground(Color.GRAY);
         footerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
+
+        AvatarPanel avatarPanel = new AvatarPanel(currentUser.getUsername(), currentUser.getAvatarPath(), 40);
+        JLabel userLabel = new JLabel(currentUser.getUsername());
+        userLabel.setFont(ThemeUtil.HEADER_FONT);
+        userLabel.setForeground(Color.WHITE);
+        userLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        buttonPanel.setBackground(Color.GRAY);
         JButton logoutButton = ButtonCustom.createButtonCustom("Log out", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR);
-        
+        buttonPanel.add(logoutButton, BorderLayout.CENTER);
+
+        footerPanel.add(avatarPanel, BorderLayout.WEST);
+        footerPanel.add(userLabel, BorderLayout.CENTER);
+        footerPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+
         logoutButton.addActionListener(e -> {
             ApiResponse response = AuthService.logout();
             if (response.getCode().equals("200")) {
@@ -170,8 +188,6 @@ public class ChatPage extends JFrame {
                 System.err.println("Logout failed: " + response.getMessage());
             }
         });
-        
-        footerPanel.add(logoutButton);
         
         // Add components to left panel
         leftPanel.add(headerPanel, BorderLayout.NORTH);
@@ -579,7 +595,7 @@ public class ChatPage extends JFrame {
             Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
             loadChat(chat);
 
-            // Reload chat list to update last message preview
+            // Reload chat list to update  last message preview
             loadChatList();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to send message: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

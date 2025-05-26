@@ -25,12 +25,17 @@ public class ChatConverter {
             messages.add(MessageConverter.converterToMessage(messageResponse));
         }
 
+        Message lastMessage = chatResponse.getLastMessage() != null 
+            ? MessageConverter.converterToMessage(chatResponse.getLastMessage()) 
+            : null;
+
         return Chat.builder()
                 .id(chatResponse.getId())
                 .name(chatResponse.getName())
                 .isGroup(chatResponse.isGroup())
                 .participants(participants)
                 .messages(messages)
+                .lastMessage(lastMessage)
                 .createdAt(chatResponse.getCreatedAt())
                 .updatedAt(chatResponse.getUpdatedAt())
                 .build();

@@ -28,55 +28,88 @@ public class LoginPage extends JFrame implements ActionListener {
         setLocationRelativeTo(null);
         setResizable(false);
         
-        // Main panel
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        // Main panel with BorderLayout for better control
+        JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(ThemeUtil.BACKGROUND_COLOR);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
         
+        // Content panel with BoxLayout
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(ThemeUtil.BACKGROUND_COLOR);
+        
         // Title
         JLabel titleLabel = new JLabel("Login");
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 120, 20, 0));
         titleLabel.setFont(ThemeUtil.TITLE_FONT);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(titleLabel);
-        mainPanel.add(Box.createVerticalStrut(30));
+        titleLabel.setForeground(ThemeUtil.TEXT_COLOR);
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
         
         // Username field
         JLabel usernameLabel = new JLabel("Username");
-        usernameLabel.setFont(ThemeUtil.NORMAL_FONT);
-        mainPanel.add(usernameLabel);
-        mainPanel.add(Box.createVerticalStrut(10));
+        usernameLabel.setFont(ThemeUtil.HEADER_FONT);
+        usernameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(usernameLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
         
         usernameField = new JTextField();
-        usernameField.setPreferredSize(new Dimension(300, 40));
+        usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        usernameField.setPreferredSize(new Dimension(320, 40));
         usernameField.setBorder(ThemeUtil.getRoundedBorder(10));
-        mainPanel.add(usernameField);
-        mainPanel.add(Box.createVerticalStrut(20));
+        usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(usernameField);
+        contentPanel.add(Box.createVerticalStrut(20));
         
         // Password field
         JLabel passwordLabel = new JLabel("Password");
-        passwordLabel.setFont(ThemeUtil.NORMAL_FONT);
-        mainPanel.add(passwordLabel);
-        mainPanel.add(Box.createVerticalStrut(10));
+        passwordLabel.setFont(ThemeUtil.HEADER_FONT);
+        passwordLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(passwordLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
         
         passwordField = new JPasswordField();
-        passwordField.setPreferredSize(new Dimension(300, 40));
+        passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        passwordField.setPreferredSize(new Dimension(320, 40));
         passwordField.setBorder(ThemeUtil.getRoundedBorder(10));
-        mainPanel.add(passwordField);
-        mainPanel.add(Box.createVerticalStrut(40));
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(passwordField);
+        contentPanel.add(Box.createVerticalStrut(40));
+
+        // add divider
+        JSeparator separator = new JSeparator();
+        separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        separator.setForeground(ThemeUtil.TEXT_COLOR);
+        separator.setBackground(ThemeUtil.TEXT_COLOR);
+        contentPanel.add(separator);
+        contentPanel.add(Box.createVerticalStrut(20));
+
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
         
-        // Login button
-        loginButton = ButtonCustom.createButtonCustom("Log in", ThemeUtil.PRIMARY_COLOR, Color.WHITE, 300, 50);
+        // Button panel for consistent width
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
+        buttonPanel.setBackground(ThemeUtil.BACKGROUND_COLOR);
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Login button - full width minus some padding
+        loginButton = ButtonCustom.createButtonCustom("Log in", ThemeUtil.PRIMARY_COLOR, Color.WHITE, 320, 50);
         loginButton.addActionListener(this);
-        loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(loginButton);
-        mainPanel.add(Box.createVerticalStrut(20));
+        loginButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        buttonPanel.add(loginButton);
+        buttonPanel.add(Box.createVerticalStrut(15));
         
-        // Register button
-        registerButton = ButtonCustom.createButtonCustom("Register", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR, 300, 50);
+        // Register button - full width minus some padding
+        registerButton = ButtonCustom.createButtonCustom("Register", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR, 320, 50);
         registerButton.addActionListener(this);
-        registerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(registerButton);
+        registerButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        registerButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        buttonPanel.add(registerButton);
+        
+        contentPanel.add(buttonPanel);
+        
+        // Add content panel to main panel
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
         
         add(mainPanel);
     }
@@ -103,7 +136,6 @@ public class LoginPage extends JFrame implements ActionListener {
                         .avatarPath(userResponse.getAvatarPath())
                         .build());
                         
-                JOptionPane.showMessageDialog(this, "Login successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
                 // redirect to main chat page
                 new ChatPage().setVisible(true);
                 this.dispose();

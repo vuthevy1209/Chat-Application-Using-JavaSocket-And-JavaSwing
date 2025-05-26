@@ -5,6 +5,7 @@ import models.Message;
 import models.User;
 import utils.ThemeUtil;
 import components.customs.AvatarPanel;
+import config.Authentication;
 
 import javax.swing.*;
 import java.awt.*;
@@ -38,12 +39,22 @@ public class ContactItem extends JPanel {
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setOpaque(false);
 
-        JLabel nameLabel = new JLabel(chat.getName());
+        JLabel nameLabel = null;
+        if (chat.isGroup()) {
+            nameLabel = new JLabel(chat.getName());
+        } else {
+            User participant = chat.getParticipants().get(0);
+            if (participant.getId().equals(Authentication.getUser().getId())) {
+                participant = chat.getParticipants().get(1); // Get the other participant in a one-on-one chat
+            }
+            nameLabel = new JLabel(participant.getUsername());
+        }
+        
         nameLabel.setFont(ThemeUtil.NORMAL_FONT);
         infoPanel.add(nameLabel, BorderLayout.CENTER);
-        
-        // Last message preview (if any)
+
         Message lastMessage = chat.getLastMessage();
+    
         if (lastMessage != null) {
             JLabel previewLabel = new JLabel(truncateText(lastMessage.getContent(), 30));
             previewLabel.setFont(ThemeUtil.SMALL_FONT);

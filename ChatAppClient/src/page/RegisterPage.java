@@ -17,91 +17,124 @@ public class RegisterPage extends JFrame implements ActionListener {
     private JPasswordField passwordField;
     private JButton registerButton;
     private JButton loginButton;
-    
+
     public RegisterPage() {
         setTitle("Chat App - Register");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(400, 550);
         setLocationRelativeTo(null);
         setResizable(false);
-        
-        // Main panel
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+
+        // Main panel with BorderLayout
+        JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(ThemeUtil.BACKGROUND_COLOR);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
-        
+
         // Title
         JLabel titleLabel = new JLabel("Register");
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 120, 20, 0));
         titleLabel.setFont(ThemeUtil.TITLE_FONT);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(titleLabel);
-        mainPanel.add(Box.createVerticalStrut(30));
-        
+        titleLabel.setForeground(ThemeUtil.TEXT_COLOR);
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+
+        // Content panel with BoxLayout
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(ThemeUtil.BACKGROUND_COLOR);
+
         // Email field
         JLabel emailLabel = new JLabel("Email");
-        emailLabel.setFont(ThemeUtil.NORMAL_FONT);
-        mainPanel.add(emailLabel);
-        mainPanel.add(Box.createVerticalStrut(10));
-        
+        emailLabel.setFont(ThemeUtil.HEADER_FONT);
+        emailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(emailLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+
         emailField = new JTextField();
-        emailField.setPreferredSize(new Dimension(300, 40));
+        emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        emailField.setPreferredSize(new Dimension(320, 40));
         emailField.setBorder(ThemeUtil.getRoundedBorder(10));
-        mainPanel.add(emailField);
-        mainPanel.add(Box.createVerticalStrut(20));
-        
+        emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(emailField);
+        contentPanel.add(Box.createVerticalStrut(20));
+
         // Username field
         JLabel usernameLabel = new JLabel("Username");
-        usernameLabel.setFont(ThemeUtil.NORMAL_FONT);
-        mainPanel.add(usernameLabel);
-        mainPanel.add(Box.createVerticalStrut(10));
-        
+        usernameLabel.setFont(ThemeUtil.HEADER_FONT);
+        usernameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(usernameLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+
         usernameField = new JTextField();
-        usernameField.setPreferredSize(new Dimension(300, 40));
+        usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        usernameField.setPreferredSize(new Dimension(320, 40));
         usernameField.setBorder(ThemeUtil.getRoundedBorder(10));
-        mainPanel.add(usernameField);
-        mainPanel.add(Box.createVerticalStrut(20));
-        
+        usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(usernameField);
+        contentPanel.add(Box.createVerticalStrut(20));
+
         // Password field
         JLabel passwordLabel = new JLabel("Password");
-        passwordLabel.setFont(ThemeUtil.NORMAL_FONT);
-        mainPanel.add(passwordLabel);
-        mainPanel.add(Box.createVerticalStrut(10));
-        
+        passwordLabel.setFont(ThemeUtil.HEADER_FONT);
+        passwordLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(passwordLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+
         passwordField = new JPasswordField();
-        passwordField.setPreferredSize(new Dimension(300, 40));
+        passwordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        passwordField.setPreferredSize(new Dimension(320, 40));
         passwordField.setBorder(ThemeUtil.getRoundedBorder(10));
-        mainPanel.add(passwordField);
-        mainPanel.add(Box.createVerticalStrut(40));
-        
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(passwordField);
+        contentPanel.add(Box.createVerticalStrut(20));
+
+        // Divider
+        JSeparator separator = new JSeparator();
+        separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        separator.setForeground(ThemeUtil.TEXT_COLOR);
+        separator.setBackground(ThemeUtil.TEXT_COLOR);
+        contentPanel.add(separator);
+        contentPanel.add(Box.createVerticalStrut(10));
+
+        // Button panel
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
+        buttonPanel.setBackground(ThemeUtil.BACKGROUND_COLOR);
+        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         // Register button
-        registerButton = ButtonCustom.createButtonCustom("Register", ThemeUtil.PRIMARY_COLOR, Color.WHITE, 300, 50);
+        registerButton = ButtonCustom.createButtonCustom("Register", ThemeUtil.PRIMARY_COLOR, Color.WHITE, 320, 50);
         registerButton.addActionListener(this);
-        registerButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(registerButton);
-        mainPanel.add(Box.createVerticalStrut(20));
-        
+        registerButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        registerButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        buttonPanel.add(registerButton);
+        buttonPanel.add(Box.createVerticalStrut(15));
+
         // Login button
-        loginButton = ButtonCustom.createButtonCustom("Login", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR, 300, 50);
+        loginButton = ButtonCustom.createButtonCustom("Login", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR, 320, 50);
         loginButton.addActionListener(this);
-        loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(loginButton);
-        
+        loginButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        buttonPanel.add(loginButton);
+
+        contentPanel.add(buttonPanel);
+
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
+
         add(mainPanel);
     }
-    
+
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == registerButton) {
             String email = emailField.getText();
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
-            
+
             if (email.isEmpty() || username.isEmpty() || password.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Please fill all fields", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            
+
             // Validate email format
             if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
                 JOptionPane.showMessageDialog(this, "Please enter a valid email address", "Error", JOptionPane.ERROR_MESSAGE);
@@ -112,25 +145,20 @@ public class RegisterPage extends JFrame implements ActionListener {
                     .email(email)
                     .username(username)
                     .password(password)
-                    .avatarPath("default_avatar.png") // Default avatar path
+                    .avatarPath("default_avatar.png")
                     .requestType("CREATE")
                     .build();
-            
+
             ApiResponse response = AuthService.register(registerRequest);
 
             if (response.getCode().equals("200")) {
-                // redirect to login page
                 JOptionPane.showMessageDialog(this, "Registration successful! Please login.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 this.dispose();
                 new LoginPage().setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(this, response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
-            
-
-            
         } else if (e.getSource() == loginButton) {
-            // Open login page
             LoginPage loginPage = new LoginPage();
             loginPage.setVisible(true);
             this.dispose();
