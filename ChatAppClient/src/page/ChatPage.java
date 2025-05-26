@@ -75,9 +75,12 @@ public class ChatPage extends JFrame {
     public interface ChatRefreshCallback {
         void refreshChatList();
     }
+
+
     
     public ChatPage() {
-        try {
+        // Connect to the realtime handler
+                try {
             // Initialize socket connection
             socket = new Socket("localhost", 12345);
             outObject = new ObjectOutputStream(socket.getOutputStream());
@@ -89,8 +92,39 @@ public class ChatPage extends JFrame {
                 try {
                     while(true) {
                         ApiResponse response = (ApiResponse) inObject.readObject();
-                        String s = (String) response.getData();
-                        System.out.println(s);
+
+                        if (response.getCode().equals("200")) {
+                            MessageResponse messageResponse = (MessageResponse) response.getData();
+                            Message message = Message.builder()
+                                .id(messageResponse.getId())
+                                .senderId(messageResponse.getSenderId())
+                                .chatId(messageResponse.getChatId())
+                                .content(messageResponse.getContent())
+                                .createdAt(messageResponse.getCreatedAt())
+                                .messageType(messageResponse.getMessageType())
+                                .build();
+
+                            // Check if the message is for the current chat
+                            if (currentChat != null && !currentChat.getId().equals(message.getChatId())) {
+                                continue;
+                            }
+
+                            ChatBubble bubble = new ChatBubble(message, false); // Assuming received messages are from others
+                            messagesPanel.add(bubble);
+
+                            SwingUtilities.invokeLater(() -> {
+                                messagesPanel.add(bubble);
+                                messagesPanel.revalidate(); // Cập nhật layout
+                                messagesPanel.repaint();    // Vẽ lại giao diện
+                                
+                                // Cuộn xuống cuối sau khi layout đã được cập nhật
+                                SwingUtilities.invokeLater(() -> {
+                                    JScrollPane scrollPane = (JScrollPane) messagesPanel.getParent().getParent();
+                                    JScrollBar vertical = scrollPane.getVerticalScrollBar();
+                                    vertical.setValue(vertical.getMaximum());
+                                });
+                            });
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -379,7 +413,6 @@ public class ChatPage extends JFrame {
             chatListPanel.add(Box.createVerticalStrut(20));
         } else {
             for (Chat chat : myChats) {
-
                 ContactItem contactItem = new ContactItem(chat);
                 contactItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
                     
@@ -388,22 +421,6 @@ public class ChatPage extends JFrame {
                     contactItem.setSelected(true);
                 }
                     
-                /*
-                Đoạn code này xử lý sự kiện khi người dùng nhấp chuột vào một liên hệ (contact) trong danh sách chat. Cụ thể:
-                @Override public void mouseClicked(MouseEvent e) - Ghi đè phương thức mouseClicked từ MouseAdapter để xử lý sự kiện khi người dùng nhấp chuột vào contactItem
-                // Deselect all contacts - Bỏ chọn tất cả các liên hệ trước đó:
-                Duyệt qua tất cả các component trong chatListPanel
-                Kiểm tra nếu component là một ContactItem
-                Gọi setSelected(false) để bỏ chọn nó (loại bỏ hiệu ứng được chọn)
-                // Select this contact - Chọn liên hệ vừa được nhấp:
-
-                Gọi setSelected(true) trên contactItem hiện tại
-                Điều này tạo hiệu ứng trực quan để người dùng biết đang chọn cuộc trò chuyện nào
-                // Load chat - Tải cuộc trò chuyện đã chọn:
-
-                Gọi phương thức loadChat(chat) để hiển thị tin nhắn của cuộc trò chuyện đó trong cửa sổ chính
-                Cập nhật tiêu đề, nội dung tin nhắn và các thành phần liên quan
-                    */
                 contactItem.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
@@ -418,7 +435,7 @@ public class ChatPage extends JFrame {
                         contactItem.setSelected(true);
                         
                         // Load chat
-                        loadChat(chat);
+                        loadChat(contactItem.getChat());
                     }
                 });
                 
@@ -642,22 +659,6 @@ public class ChatPage extends JFrame {
             JOptionPane.showMessageDialog(this, "Failed to send message: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
-            // if (response.getCode().equals("200")) {
-            //     // Clear input field
-            //     messageField.setText("");
-
-            //     // Reload chat
-            //     ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
-            //     Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
-            //     loadChat(chat);
-
-            //     // Reload chat list to update  last message preview
-            //     loadChatList();
-            // } else {
-            //     JOptionPane.showMessageDialog(this, "Failed to send message: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            //     System.err.println("Failed to send message: " + response.getMessage());
-            // }
     }
 
 

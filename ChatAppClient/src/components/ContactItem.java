@@ -13,6 +13,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class ContactItem extends JPanel {
+    private String contactId;
     private Chat chat;
     private boolean isSelected;
     private Color defaultBackground;
@@ -20,6 +21,7 @@ public class ContactItem extends JPanel {
     private Color selectedBackground;
     
     public ContactItem(Chat chat) {
+        this.contactId = chat.getId();
         this.chat = chat;
         this.isSelected = false;
         this.defaultBackground = Color.WHITE;
@@ -92,5 +94,17 @@ public class ContactItem extends JPanel {
     public void setSelected(boolean selected) {
         this.isSelected = selected;
         setBackground(selected ? selectedBackground : defaultBackground);
+    }
+
+    public Chat getChat() {
+        return chat;
+    }
+
+    public String getContactId() {
+        return contactId;
+    }
+
+    public boolean isSelected() {
+        return isSelected;
     }
 }

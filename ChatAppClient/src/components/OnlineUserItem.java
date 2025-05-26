@@ -72,8 +72,16 @@ public class OnlineUserItem extends JPanel {
             if (refreshCallback != null) {
                 refreshCallback.refreshChatList();
             }
+        } else if (response.getCode().equals("400")) {
+            JOptionPane.showMessageDialog(null, "Chat already exists", "ERROR", JOptionPane.INFORMATION_MESSAGE);
+            if (refreshCallback != null) {
+                refreshCallback.refreshChatList();
+            }
         } else {
             JOptionPane.showMessageDialog(null, response.getMessage(), "ERROR", JOptionPane.INFORMATION_MESSAGE);
+            if (refreshCallback != null) {
+                refreshCallback.refreshChatList();
+            }
         }
     }
 }
