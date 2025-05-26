@@ -23,8 +23,12 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -98,25 +102,21 @@ public class ChatPage extends JFrame {
         add(leftPanel, BorderLayout.WEST);
         add(centerPanel, BorderLayout.CENTER);
         add(rightPanel, BorderLayout.EAST);
-        
-        // Load initial chat if available
-        ApiResponse response = (ApiResponse) UserService.getMyChats();
-            if (response.getCode().equals("200")) {
-                List<ChatResponse> chatResponses = (List<ChatResponse>) response.getData();
-                for (ChatResponse chatResponse : chatResponses) {
-                    Chat chat = ChatConverter.converterToChat(chatResponse);
-                    if (chat != null) {
-                        myChats.add(chat);
-                    }
-                }
-            } else {
-                System.err.println("Failed to load chats: " + response.getMessage());
-            }
 
-        if (!myChats.isEmpty()) {
-            loadChat(myChats.get(0));
-        }
-        
+        messagesPanel.setLayout(new GridBagLayout()); // Đảm bảo ảnh luôn ở giữa
+
+        JPanel backgroundMessagePanel = new JPanel();
+        backgroundMessagePanel.setOpaque(false); // Trong suốt
+        Image backgroundImage = IconUtil.getImageIcon("/icon/Message2.png", 200, 200).getImage();
+        backgroundMessagePanel.add(new JLabel(new ImageIcon(backgroundImage)));
+
+        // Thêm ảnh vào giữa bằng GridBagConstraints
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        messagesPanel.add(backgroundMessagePanel, gbc);
+
         // Start the timer to refresh online users
         startOnlineUsersRefreshTimer();
     }
@@ -449,6 +449,7 @@ public class ChatPage extends JFrame {
     }
     
     private void loadChat(Chat chat) {
+        
         currentChat = chat;
         
         // Update chat name in header
@@ -456,6 +457,8 @@ public class ChatPage extends JFrame {
         
         // Clear messages panel
         messagesPanel.removeAll();
+
+
         
         // Group messages by date
         Map<String, List<Message>> messagesByDate = new HashMap<>();

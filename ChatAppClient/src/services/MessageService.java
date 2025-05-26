@@ -14,7 +14,7 @@ public class MessageService {
             .headers(Authentication.getUser().getId())
             .payload(request)
             .build();
-
+        
         return ApiUtil.handleRequest(apiRequest);
     }
 }
