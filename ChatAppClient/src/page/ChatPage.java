@@ -4,8 +4,10 @@ import components.ChatBubble;
 import components.ContactItem;
 import components.DateSeparator;
 import components.OnlineUserItem;
+import components.UserItem;
 import components.customs.*;
 import dto.request.ApiRequest;
+import dto.request.ChatRequest;
 import dto.request.MessageRequest;
 import dto.response.ApiResponse;
 import dto.response.ChatResponse;
@@ -369,7 +371,7 @@ public class ChatPage extends JFrame {
 
         JButton createGroupButton = ButtonCustom.createButtonCustom("Create Group Chat", ThemeUtil.PRIMARY_COLOR, Color.WHITE);
         createGroupButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Create Group Chat functionality not implemented yet", "Info", JOptionPane.INFORMATION_MESSAGE);
+            createGroupChat();
         });
 
         footerPanel.add(createGroupButton);
@@ -382,6 +384,133 @@ public class ChatPage extends JFrame {
         // Load online users and start refresh timer
         loadOnlineUsers();
         startOnlineUsersRefreshTimer();
+    }
+
+    private void createGroupChat() {
+        // Show JcheckBox of all users to select for group chat
+        ApiResponse response = UserService.getAllUsers();
+        if (!response.getCode().equals("200")) {
+            JOptionPane.showMessageDialog(this, "Failed to load users: " + response.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        List<UserResponse> userResponses = (List<UserResponse>) response.getData();
+
+        List<User> users = new ArrayList<>();
+        for (UserResponse userResponse : userResponses) {
+            if (!userResponse.getId().equals(Authentication.getUser().getId())) { // Skip current user
+                users.add(UserConverter.converterToUser(userResponse));
+            }
+        }
+
+        if (users.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No users available to create a group chat", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Create a dialog to select users for group chat
+        JDialog dialog = new JDialog(this, "Create Group Chat", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(1000, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        ((JComponent) dialog.getContentPane()).setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        dialog.setResizable(false);
+        dialog.setIconImage(IconUtil.getImageIcon("/icon/Chat.png", 24, 24).getImage());
+        dialog.setModal(true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setTitle("Create Group Chat");
+
+        // Name field for group chat
+        JTextField groupNameField = new JTextField();
+        groupNameField.setFont(ThemeUtil.HEADER_FONT);
+        groupNameField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeUtil.LIGHT_GRAY, 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+
+        groupNameField.setPreferredSize(new Dimension(300, 40));
+        JPanel namePanel = new JPanel(new BorderLayout());
+        namePanel.setOpaque(false);
+        namePanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        JLabel groupNameLabel = new JLabel("Group Name:");
+        groupNameLabel.setFont(ThemeUtil.HEADER_FONT);
+        namePanel.add(groupNameLabel, BorderLayout.WEST);
+        namePanel.add(groupNameField, BorderLayout.CENTER);
+
+        dialog.add(namePanel, BorderLayout.NORTH);
+
+        // Create a panel with checkboxes for each user
+        JPanel userPanel = new JPanel();
+        userPanel.setLayout(new BoxLayout(userPanel, BoxLayout.Y_AXIS));
+        List<JCheckBox> checkBoxes = new ArrayList<>();
+        for (User user : users) {
+            UserItem userItem = new UserItem(user);
+            JCheckBox checkBox = new JCheckBox();
+            checkBox.setFont(ThemeUtil.NORMAL_FONT);
+
+            JPanel checkBoxPanel = new JPanel(new BorderLayout());
+            checkBoxPanel.setOpaque(false);
+            checkBoxPanel.add(userItem, BorderLayout.CENTER);
+            checkBoxPanel.add(checkBox, BorderLayout.EAST);
+
+            userPanel.add(checkBoxPanel);
+            checkBoxes.add(checkBox);
+        }
+
+        dialog.add(userPanel, BorderLayout.CENTER);
+
+        JButton createButton = ButtonCustom.createButtonCustom("Create", ThemeUtil.PRIMARY_COLOR, Color.WHITE);
+        createButton.addActionListener(ev -> {
+            List<User> selectedUsers = new ArrayList<>();
+            for (JCheckBox checkBox : checkBoxes) {
+                if (checkBox.isSelected()) {
+                    selectedUsers.add(users.get(checkBoxes.indexOf(checkBox)));
+                }
+            }
+
+            String groupName = groupNameField.getText().trim();
+            if (groupName.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Group name cannot be empty", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            if (selectedUsers.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Please select at least one user to create a group chat", "Warning", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            List<String> participantIds = new ArrayList<>();
+            participantIds.add(Authentication.getUser().getId());
+            for (User user : selectedUsers) {
+                System.out.println("Selected user: " + user.getUsername());
+                participantIds.add(user.getId());
+            }
+
+            ChatRequest chatRequest = ChatRequest.builder()
+                .name(groupName)
+                .participantIds(participantIds)
+                .isGroup(true)
+                .requestType("create")
+                .build();
+
+            ApiResponse res = (ApiResponse) ChatService.createChat(chatRequest);
+
+            if (res.getCode().equals("200")) {
+                loadChatList();
+            } else if (res.getCode().equals("400")) {
+                
+            } else {
+                JOptionPane.showMessageDialog(null, res.getMessage(), "ERROR", JOptionPane.INFORMATION_MESSAGE);
+
+            }
+
+            dialog.dispose();
+        });
+        dialog.add(createButton, BorderLayout.SOUTH);
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
     
     private void loadChatList() {

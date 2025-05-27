@@ -25,4 +25,14 @@ public class UserService {
 
         return ApiUtil.handleRequest(request);
     }
+
+    public static ApiResponse getAllUsers() {
+        ApiRequest request = ApiRequest.builder()
+            .method("GET")
+            .url("/users")
+            .headers(Authentication.getUser().getId())
+            .build();
+
+        return ApiUtil.handleRequest(request);
+    }
 }
