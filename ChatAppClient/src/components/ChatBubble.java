@@ -1,27 +1,34 @@
 package components;
 
 import models.Message;
-import utils.IconUtil;
 import utils.ThemeUtil;
 
 import javax.swing.*;
+
+import components.customs.AvatarPanel;
+import config.Authentication;
+
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
 
 public class ChatBubble extends JPanel {
     private Message message;
     private boolean isSent;
-    private JLabel timeLabel;
-    private JLabel readStatusLabel;
     
-    public ChatBubble(Message message, boolean isSent) {
+    public ChatBubble(Message message) {
+
         this.message = message;
-        this.isSent = isSent;
-        
+        this.isSent = message.getSenderId().equals(Authentication.getUser().getId());
+
         setOpaque(false);
-        setLayout(new BorderLayout(5, 5));
+        setLayout(new BorderLayout());
         
-        // Create message content panel
+        // Create main container with padding
+        JPanel mainContainer = new JPanel(new BorderLayout());
+        mainContainer.setOpaque(false);
+        mainContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Create message content panel with fixed width
         JPanel contentPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -39,97 +46,55 @@ public class ChatBubble extends JPanel {
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
                 g2.dispose();
             }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                // Cố định chiều rộng, linh hoạt chiều cao
+                Dimension superSize = super.getPreferredSize();
+                return new Dimension(300, superSize.height);
+            }
         };
         contentPanel.setOpaque(false);
         contentPanel.setLayout(new BorderLayout(5, 5));
-        
+
+        // Username label + Created at label
+        JLabel headerLabel = new JLabel("@" + message.getSenderUsername() + " - " + message.getCreatedAt().format(DateTimeFormatter.ofPattern("HH:mm")));
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 15));
+        headerLabel.setForeground(ThemeUtil.DARK_GRAY);
+        headerLabel.setBorder(BorderFactory.createEmptyBorder(2, 12, 0, 12));
+
         // Create message text
-        JTextArea textArea = new JTextArea(message.getContent()); 
+        JTextArea textArea = new JTextArea(message.getContent());
         textArea.setEditable(false);
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setOpaque(false);
         textArea.setFont(ThemeUtil.NORMAL_FONT);
         textArea.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        
+
+        contentPanel.add(headerLabel, BorderLayout.NORTH);
         contentPanel.add(textArea, BorderLayout.CENTER);
-        
-        // Create status panel (time and read status)
-        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
-        statusPanel.setOpaque(false);
-        
 
-        timeLabel = new JLabel(message.getCreatedAt().format(DateTimeFormatter.ofPattern("HH:mm")));
-        timeLabel.setFont(ThemeUtil.SMALL_FONT);
-        timeLabel.setForeground(Color.DARK_GRAY);
-        
-        statusPanel.add(timeLabel);
+        // Create wrapper panel for alignment
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setOpaque(false);
         
         if (isSent) {
-            readStatusLabel = new JLabel();
-            if (message.isRead()) {
-                readStatusLabel.setIcon(IconUtil.getImageIcon("/icon/check_Icon.png", 12, 12));
-            }
-            statusPanel.add(readStatusLabel);
-        }
-        
-        contentPanel.add(statusPanel, BorderLayout.SOUTH);
-        
-        // Add content panel to main panel with margins for alignment
-        if (isSent) {
-            // For sent messages, add left margin to push bubble to the right
-            setBorder(BorderFactory.createEmptyBorder(0, 300, 0, 0));
+            // Tin nhắn của mình - nằm bên phải
+            wrapperPanel.add(contentPanel, BorderLayout.EAST);
         } else {
-            // For received messages, add right margin to keep bubble on the left
-            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 300));
-        }
-
-        add(contentPanel, BorderLayout.CENTER);
-        
-        // Add padding
-        add(Box.createVerticalStrut(2), BorderLayout.NORTH);
-        add(Box.createVerticalStrut(2), BorderLayout.SOUTH);
-        add(Box.createHorizontalStrut(2), BorderLayout.EAST);
-        add(Box.createHorizontalStrut(2), BorderLayout.WEST);
-    }
-    
-    @Override
-    public Dimension getPreferredSize() {
-        Dimension size = super.getPreferredSize();
-        
-        // Tính toán kích thước dựa trên nội dung text
-        JTextArea tempTextArea = new JTextArea(message.getContent());
-        tempTextArea.setFont(ThemeUtil.NORMAL_FONT);
-        tempTextArea.setLineWrap(true);
-        tempTextArea.setWrapStyleWord(true);
-        
-        // Giới hạn chiều rộng tối đa
-        Container parent = getParent();
-        int maxWidth = 300; // Default max width
-        if (parent != null && parent.getWidth() > 0) {
-            maxWidth = Math.min(400, (int) (parent.getWidth() * 0.6));
+            // Tin nhắn của người khác - nằm bên trái với avatar
+            JPanel leftPanel = new JPanel(new BorderLayout(10, 0));
+            leftPanel.setOpaque(false);
+            
+            AvatarPanel avatarPanel = new AvatarPanel(message.getSenderUsername(), null, 40);
+            leftPanel.add(avatarPanel, BorderLayout.WEST);
+            leftPanel.add(contentPanel, BorderLayout.CENTER);
+            
+            wrapperPanel.add(leftPanel, BorderLayout.WEST);
         }
         
-        // Đặt chiều rộng cho textArea để tính chiều cao
-        tempTextArea.setSize(maxWidth - 50, Integer.MAX_VALUE); // -50 for padding and margins
-        Dimension textSize = tempTextArea.getPreferredSize();
-        
-        // Tính toán kích thước bubble
-        int bubbleWidth = Math.max(100, Math.min(maxWidth, textSize.width + 30)); // +30 for padding
-        int bubbleHeight = textSize.height + 50; // +50 for padding, status panel
-        
-        return new Dimension(bubbleWidth, bubbleHeight);
-    }
-    
-    @Override
-    public Dimension getMaximumSize() {
-        Dimension preferred = getPreferredSize();
-        // Quan trọng: Giới hạn chiều cao tối đa để tránh bị kéo giãn
-        return new Dimension(Integer.MAX_VALUE, preferred.height);
-    }
-    
-    @Override
-    public Dimension getMinimumSize() {
-        return new Dimension(100, 40);
+        mainContainer.add(wrapperPanel, BorderLayout.CENTER);
+        add(mainContainer, BorderLayout.CENTER);
     }
 }

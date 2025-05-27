@@ -79,7 +79,6 @@ public class ChatPage extends JFrame {
     }
 
 
-    
     public ChatPage() {
         // Connect to the realtime handler
                 try {
@@ -101,6 +100,7 @@ public class ChatPage extends JFrame {
                                 .id(messageResponse.getId())
                                 .senderId(messageResponse.getSenderId())
                                 .chatId(messageResponse.getChatId())
+                                .senderUsername(messageResponse.getSenderUsername())
                                 .content(messageResponse.getContent())
                                 .createdAt(messageResponse.getCreatedAt())
                                 .messageType(messageResponse.getMessageType())
@@ -111,7 +111,7 @@ public class ChatPage extends JFrame {
                                 continue;
                             }
 
-                            ChatBubble bubble = new ChatBubble(message, false); // Assuming received messages are from others
+                            ChatBubble bubble = new ChatBubble(message); // Assuming received messages are from others
                             messagesPanel.add(bubble);
 
                             SwingUtilities.invokeLater(() -> {
@@ -126,6 +126,8 @@ public class ChatPage extends JFrame {
                                     vertical.setValue(vertical.getMaximum());
                                 });
                             });
+
+                            loadChatList(); // Refresh chat list to update last message time
                         }
                     }
                 } catch (Exception e) {
@@ -696,8 +698,7 @@ public class ChatPage extends JFrame {
             // Add messages for this date
             List<Message> messages = messagesByDate.get(date);
             for (Message message : messages) {
-                boolean isSent = message.getSenderId().equals(Authentication.getUser().getId());
-                ChatBubble bubble = new ChatBubble(message, isSent);
+                ChatBubble bubble = new ChatBubble(message);
                 messagesPanel.add(bubble);
             }
         }
@@ -757,6 +758,7 @@ public class ChatPage extends JFrame {
 
         MessageRequest messageRequest = MessageRequest.builder()
             .senderId(Authentication.getUser().getId())
+            .senderUsername(Authentication.getUser().getUsername())
             .chatId(currentChat.getId())
             .content(content)
             .messageType("TEXT")
@@ -778,12 +780,35 @@ public class ChatPage extends JFrame {
             // Clear input field
             messageField.setText("");
 
-            // Reload chat
-            ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
-            Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
-            loadChat(chat);
-            
-        } catch (IOException e) {
+            // // Reload chat
+            // ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
+            // Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
+            // loadChat(chat);
+
+            // add message to messages panel
+            Message message = Message.builder()
+                .senderId(Authentication.getUser().getId())
+                .senderUsername(Authentication.getUser().getUsername())
+                .chatId(currentChat.getId())
+                .content(content)
+                .createdAt(LocalDateTime.now())
+                .messageType("TEXT")
+                .build();
+
+            ChatBubble bubble = new ChatBubble(message); // Assuming sent messages are from the user
+            messagesPanel.add(bubble);
+            messagesPanel.revalidate(); // Update layout
+            messagesPanel.repaint();    // Redraw the interface
+            SwingUtilities.invokeLater(() -> {
+                JScrollPane scrollPane = (JScrollPane) messagesPanel.getParent().getParent();
+                JScrollBar vertical = scrollPane.getVerticalScrollBar();
+                vertical.setValue(vertical.getMaximum()); // Scroll to bottom after sending message
+            });
+
+            // load chat list to update last message time
+            loadChatList(); 
+
+            } catch (IOException e) {
             System.err.println("Failed to send message: " + e.getMessage());
             JOptionPane.showMessageDialog(this, "Failed to send message: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             return;

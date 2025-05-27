@@ -11,7 +11,8 @@ public class MessageConverter {
 
         return Message.builder()
                 .id(messageResponse.getId())
-                .senderId(messageResponse.getSenderId())
+                .senderId(messageResponse.getSenderId()) // Assuming senderId is not needed in Message model
+                .senderUsername(messageResponse.getSenderUsername())
                 .chatId(messageResponse.getChatId())
                 .content(messageResponse.getContent())
                 .imagePath(messageResponse.getImagePath())

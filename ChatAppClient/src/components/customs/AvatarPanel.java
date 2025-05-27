@@ -4,9 +4,12 @@ import models.User;
 import utils.ThemeUtil;
 import utils.StringUtils;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.net.URL;
 
 public class AvatarPanel extends JPanel {
     private int size;
@@ -23,11 +26,30 @@ public class AvatarPanel extends JPanel {
 
         if (imagePath != null) {
             try {
-                avatar = new ImageIcon(getClass().getResource(imagePath));
-                Image img = avatar.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
-                avatar = new ImageIcon(img);
+                BufferedImage img;
+                if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+                    // Tải ảnh từ web
+                    URL url = new URL(imagePath);
+                    img = ImageIO.read(url);
+                } else {
+                    // Tải ảnh từ resources (local)
+                    URL resourceUrl = getClass().getResource(imagePath);
+                    if (resourceUrl != null) {
+                        img = ImageIO.read(resourceUrl);
+                    } else {
+                        img = null;
+                    }
+                }
+                
+                if (img != null) {
+                    Image scaledImg = img.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+                    avatar = new ImageIcon(scaledImg);
+                } else {
+                    avatar = null;
+                }
             } catch (Exception e) {
                 avatar = null;
+                System.err.println("Failed to load image: " + e.getMessage());
             }
         }
     }

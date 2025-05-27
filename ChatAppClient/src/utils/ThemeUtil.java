@@ -12,6 +12,7 @@ public class ThemeUtil {
     public static final Color BACKGROUND_COLOR = new Color(245, 245, 245);
     public static final Color TEXT_COLOR = new Color(51, 51, 51);
     public static final Color LIGHT_GRAY = new Color(230, 230, 230);
+    public static final Color DARK_GRAY = new Color(100, 100, 100);
     public static final Color CHAT_BUBBLE_SENT = new Color(144, 238, 144);
     public static final Color CHAT_BUBBLE_RECEIVED = new Color(255, 255, 255);
     public static final Color ONLINE_COLOR = new Color(0, 0, 0);
