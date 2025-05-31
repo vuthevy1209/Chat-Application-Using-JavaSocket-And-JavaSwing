@@ -7,7 +7,7 @@ import java.net.Socket;
 import dto.request.ApiRequest;
 import dto.response.ApiResponse;
 
-public class ApiUtil {
+public class ApiUtils {
     public static ApiResponse handleRequest(ApiRequest request) {
         try (Socket socket = new Socket("localhost", 8080)) {
             ObjectOutputStream outObject = new ObjectOutputStream(socket.getOutputStream());

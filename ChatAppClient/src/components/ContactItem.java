@@ -58,10 +58,20 @@ public class ContactItem extends JPanel {
         Message lastMessage = chat.getLastMessage();
     
         if (lastMessage != null) {
-            JLabel previewLabel = new JLabel(truncateText(lastMessage.getContent(), 30));
-            previewLabel.setFont(ThemeUtil.SMALL_FONT);
-            previewLabel.setForeground(Color.GRAY);
-            infoPanel.add(previewLabel, BorderLayout.SOUTH);
+            JLabel previewLabel = null;
+            if (lastMessage.getMessageType().equals("TEXT")) {
+                String previewText = truncateText(lastMessage.getContent(), 30);
+                previewLabel = new JLabel(previewText);
+            } else if (lastMessage.getMessageType().equals("IMAGE")) {
+                previewLabel = new JLabel("Sent an image");
+            } else if (lastMessage.getMessageType().equals("FILE")) {
+                previewLabel = new JLabel("Sent a file");
+            }
+            if (previewLabel != null) {
+                previewLabel.setFont(ThemeUtil.SMALL_FONT);
+                previewLabel.setForeground(Color.GRAY);
+                infoPanel.add(previewLabel, BorderLayout.SOUTH);
+            }
         }
         
         add(infoPanel, BorderLayout.CENTER);

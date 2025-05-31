@@ -4,7 +4,7 @@ import models.Chat;
 import models.User;
 import page.ChatPage.ChatRefreshCallback;
 import services.ChatService;
-import utils.IconUtil;
+import utils.IconUtils;
 import utils.ThemeUtil;
 import components.customs.AvatarPanel;
 import config.Authentication;
@@ -44,7 +44,7 @@ public class OnlineUserItem extends JPanel {
         add(nameLabel, BorderLayout.CENTER);
         
         // Add button
-        JButton addButton = new JButton(IconUtil.getImageIcon("/icon/Chat.png", 40, 40));
+        JButton addButton = new JButton(IconUtils.getImageIcon("/icon/Chat.png", 40, 40));
         addButton.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         addButton.addMouseListener(new MouseAdapter() {

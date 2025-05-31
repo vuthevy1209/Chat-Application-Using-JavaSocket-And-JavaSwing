@@ -4,7 +4,7 @@ import config.Authentication;
 import dto.request.ApiRequest;
 import dto.request.ChatRequest;
 import dto.response.ApiResponse;
-import utils.ApiUtil;
+import utils.ApiUtils;
 
 public class ChatService {
     public static ApiResponse createChat(ChatRequest request) {
@@ -16,7 +16,7 @@ public class ChatService {
                 .payload(request)
                 .build();
 
-        return ApiUtil.handleRequest(apiRequest);
+        return ApiUtils.handleRequest(apiRequest);
     }
 
     public static ApiResponse getChatById(String chatId) {
@@ -28,6 +28,6 @@ public class ChatService {
                 .payload(chatId)
                 .build();
 
-        return ApiUtil.handleRequest(apiRequest);
+        return ApiUtils.handleRequest(apiRequest);
     }
 }

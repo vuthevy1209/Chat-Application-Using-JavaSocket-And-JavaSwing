@@ -4,7 +4,7 @@ import config.Authentication;
 import dto.request.ApiRequest;
 import dto.request.MessageRequest;
 import dto.response.ApiResponse;
-import utils.ApiUtil;
+import utils.ApiUtils;
 
 public class MessageService {
     public static ApiResponse sendMessage(MessageRequest request) {
@@ -15,6 +15,6 @@ public class MessageService {
             .payload(request)
             .build();
         
-        return ApiUtil.handleRequest(apiRequest);
+        return ApiUtils.handleRequest(apiRequest);
     }
 }

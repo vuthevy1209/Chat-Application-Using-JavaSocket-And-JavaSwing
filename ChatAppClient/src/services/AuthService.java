@@ -5,7 +5,7 @@ import dto.request.ApiRequest;
 import dto.request.AuthenticateRequest;
 import dto.request.RegisterRequest;
 import dto.response.ApiResponse;
-import utils.ApiUtil;
+import utils.ApiUtils;
 
 public class AuthService {
 
@@ -19,7 +19,7 @@ public class AuthService {
                             .build())
                 .build();
 
-        return ApiUtil.handleRequest(request);
+        return ApiUtils.handleRequest(request);
     }
 
     public static ApiResponse register(RegisterRequest request) {
@@ -29,7 +29,7 @@ public class AuthService {
                 .payload(request)
                 .build();
 
-        return ApiUtil.handleRequest(apiRequest);
+        return ApiUtils.handleRequest(apiRequest);
     }
 
     public static ApiResponse logout() {
@@ -39,6 +39,6 @@ public class AuthService {
             .headers(Authentication.getUser().getId())
             .build();
 
-        return ApiUtil.handleRequest(request);
+        return ApiUtils.handleRequest(request);
     }
 }

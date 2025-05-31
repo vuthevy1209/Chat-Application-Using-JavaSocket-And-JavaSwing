@@ -16,7 +16,8 @@ import dto.response.UserResponse;
 import models.Message;
 import models.User;
 import models.Chat;
-import utils.IconUtil;
+import utils.CloudinaryUtils;
+import utils.IconUtils;
 import utils.ThemeUtil;
 
 import javax.swing.*;
@@ -26,6 +27,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -102,7 +104,9 @@ public class ChatPage extends JFrame {
                                 .chatId(messageResponse.getChatId())
                                 .senderUsername(messageResponse.getSenderUsername())
                                 .content(messageResponse.getContent())
-                                .createdAt(messageResponse.getCreatedAt())
+                                .attachmentPath(messageResponse.getAttachmentPath())
+                                .imagePath(messageResponse.getImagePath())
+                                .isRead(messageResponse.isRead())                                .createdAt(messageResponse.getCreatedAt())
                                 .messageType(messageResponse.getMessageType())
                                 .build();
 
@@ -174,7 +178,7 @@ public class ChatPage extends JFrame {
 
         JPanel backgroundMessagePanel = new JPanel();
         backgroundMessagePanel.setOpaque(false); // Trong suốt
-        Image backgroundImage = IconUtil.getImageIcon("/icon/Message2.png", 200, 200).getImage();
+        Image backgroundImage = IconUtils.getImageIcon("/icon/Message2.png", 200, 200).getImage();
         backgroundMessagePanel.add(new JLabel(new ImageIcon(backgroundImage)));
 
         // Thêm ảnh vào giữa bằng GridBagConstraints
@@ -204,7 +208,7 @@ public class ChatPage extends JFrame {
         titleLabel.setFont(ThemeUtil.HEADER_FONT);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20));
   
-        JLabel headerIcon = new JLabel(IconUtil.getImageIcon("/icon/Message.png", 50, 50));
+        JLabel headerIcon = new JLabel(IconUtils.getImageIcon("/icon/Message.png", 50, 50));
         headerIcon.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
         
         headerPanel.add(headerIcon, BorderLayout.WEST);
@@ -304,14 +308,142 @@ public class ChatPage extends JFrame {
         messageField.setFont(ThemeUtil.NORMAL_FONT);
         
         JButton attachButton = new JButton();
-        attachButton.setIcon(IconUtil.getImageIcon("/icon/FileAttach.png", 24, 24));
+        attachButton.setIcon(IconUtils.getImageIcon("/icon/FileAttach.png", 24, 24));
         attachButton.setBorderPainted(false);
         attachButton.setContentAreaFilled(false);
         attachButton.setFocusPainted(false);
         attachButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        attachButton.addActionListener(e -> {
+            // Open file chooser to select a file to attach
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Select a file to attach");
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                // Get the selected file
+                File selectedFile = fileChooser.getSelectedFile();
+                // Handle file attachment logic here
+                
+                if (currentChat == null) {
+                    JOptionPane.showMessageDialog(this, "Please select a chat to send the file", "Warning", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                // image file
+                if (selectedFile.isFile() && selectedFile.getName().toLowerCase().endsWith(".png") || selectedFile.getName().toLowerCase().endsWith(".jpg") || selectedFile.getName().toLowerCase().endsWith(".jpeg")) {
+                    
+                    // Create loading dialog with custom spinner
+                    JDialog loadingDialog = new JDialog(this, "Uploading...", true);
+                    loadingDialog.setSize(250, 150);
+                    loadingDialog.setLocationRelativeTo(this);
+                    loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+                    loadingDialog.setResizable(false);
+                    
+                    // Create loading panel
+                    JPanel loadingPanel = new JPanel(new BorderLayout());
+                    loadingPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+                    
+                    // Add custom spinner
+                    LoadingSpinner spinner = new LoadingSpinner();
+                    JLabel loadingLabel = new JLabel("Uploading image...", JLabel.CENTER);
+                    loadingLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+                    
+                    JPanel centerPanel = new JPanel(new BorderLayout());
+                    centerPanel.add(spinner, BorderLayout.CENTER);
+                    centerPanel.add(loadingLabel, BorderLayout.SOUTH);
+                    
+                    loadingPanel.add(centerPanel, BorderLayout.CENTER);
+                    loadingDialog.add(loadingPanel);
+                    
+                    // Disable the attach button during upload
+                    attachButton.setEnabled(false);
+                    
+                    // Start spinner
+                    spinner.start();
+                    
+                    // Perform upload in background thread
+                    SwingWorker<String, Void> uploadWorker = new SwingWorker<String, Void>() {
+                        @Override
+                        protected String doInBackground() throws Exception {
+                            return CloudinaryUtils.uploadImage(selectedFile);
+                        }
+                        
+                        @Override
+                        protected void done() {
+                            try {
+                                String imageUrl = get();
+                                
+                                // Create a message request for the image
+                                MessageRequest messageRequest = MessageRequest.builder()
+                                    .senderId(Authentication.getUser().getId())
+                                    .senderUsername(Authentication.getUser().getUsername())
+                                    .chatId(currentChat.getId())
+                                    .imagePath(imageUrl)
+                                    .messageType("IMAGE")
+                                    .requestType("CREATE")
+                                    .build();
+
+                                // Send message request to server
+                                outObject.writeObject(ApiRequest.builder()
+                                    .method("POST")
+                                    .url("/messages")
+                                    .headers(Authentication.getUser().getId())
+                                    .payload(messageRequest)
+                                    .build());
+                                outObject.flush();
+
+                                // add image to messages panel
+                                Message message = Message.builder()
+                                    .senderId(Authentication.getUser().getId())
+                                    .senderUsername(Authentication.getUser().getUsername())
+                                    .chatId(currentChat.getId())
+                                    .imagePath(imageUrl)
+                                    .messageType("IMAGE")
+                                    .build();
+
+                                ChatBubble bubble = new ChatBubble(message);
+                                messagesPanel.add(bubble);
+                                messagesPanel.revalidate();
+                                messagesPanel.repaint();
+                                SwingUtilities.invokeLater(() -> {
+                                    JScrollPane sp = (JScrollPane) messagesPanel.getParent().getParent();
+                                    JScrollBar vertical = sp.getVerticalScrollBar();
+                                    vertical.setValue(vertical.getMaximum());
+                                });
+
+                                // load chat list to update last message time
+                                loadChatList();
+                                
+                            } catch (Exception ex) {
+                                SwingUtilities.invokeLater(() -> {
+                                    JOptionPane.showMessageDialog(ChatPage.this, 
+                                        "Failed to upload image: " + ex.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+                                });
+                                ex.printStackTrace();
+                            } finally {
+                                // Close loading dialog and re-enable button
+                                SwingUtilities.invokeLater(() -> {
+                                    spinner.stop();
+                                    loadingDialog.dispose();
+                                    attachButton.setEnabled(true);
+                                });
+                            }
+                        }
+                    };
+                    
+                    // Show loading dialog and start upload
+                    uploadWorker.execute();
+                    loadingDialog.setVisible(true);
+                    
+                } else {
+                    JOptionPane.showMessageDialog(this, "Please select a valid image file", "Warning", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        });
         
         sendButton = new JButton();
-        sendButton.setIcon(IconUtil.getImageIcon("/icon/Send_Icon.png", 24, 24));
+        sendButton.setIcon(IconUtils.getImageIcon("/icon/Send_Icon.png", 24, 24));
         sendButton.setBorderPainted(false);
         sendButton.setContentAreaFilled(false);
         sendButton.setFocusPainted(false);
@@ -346,7 +478,7 @@ public class ChatPage extends JFrame {
         headerPanel.setBackground(Color.GRAY);
         headerPanel.setPreferredSize(new Dimension(250, 60));
 
-        JLabel headerIcon = new JLabel(IconUtil.getImageIcon("/icon/Users.png", 40, 40));
+        JLabel headerIcon = new JLabel(IconUtils.getImageIcon("/icon/Users.png", 40, 40));
         headerIcon.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
         
         JLabel onlineLabel = new JLabel("Online");
@@ -417,7 +549,7 @@ public class ChatPage extends JFrame {
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         ((JComponent) dialog.getContentPane()).setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         dialog.setResizable(false);
-        dialog.setIconImage(IconUtil.getImageIcon("/icon/Chat.png", 24, 24).getImage());
+        dialog.setIconImage(IconUtils.getImageIcon("/icon/Chat.png", 24, 24).getImage());
         dialog.setModal(true);
         dialog.setLayout(new BorderLayout());
         dialog.setTitle("Create Group Chat");
@@ -808,7 +940,7 @@ public class ChatPage extends JFrame {
             // load chat list to update last message time
             loadChatList(); 
 
-            } catch (IOException e) {
+        } catch (IOException e) {
             System.err.println("Failed to send message: " + e.getMessage());
             JOptionPane.showMessageDialog(this, "Failed to send message: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             return;

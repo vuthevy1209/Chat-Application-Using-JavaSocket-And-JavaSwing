@@ -3,7 +3,7 @@ package services;
 import config.Authentication;
 import dto.request.ApiRequest;
 import dto.response.ApiResponse;
-import utils.ApiUtil;
+import utils.ApiUtils;
 
 public class UserService {
     public static ApiResponse getMyChats() {
@@ -13,7 +13,7 @@ public class UserService {
             .url("/chats/mychats")
             .build();
 
-        return ApiUtil.handleRequest(request);
+        return ApiUtils.handleRequest(request);
     }
 
     public static ApiResponse getOnlineUsers() {
@@ -23,7 +23,7 @@ public class UserService {
             .headers(Authentication.getUser().getId())
             .build();
 
-        return ApiUtil.handleRequest(request);
+        return ApiUtils.handleRequest(request);
     }
 
     public static ApiResponse getAllUsers() {
@@ -33,6 +33,6 @@ public class UserService {
             .headers(Authentication.getUser().getId())
             .build();
 
-        return ApiUtil.handleRequest(request);
+        return ApiUtils.handleRequest(request);
     }
 }
