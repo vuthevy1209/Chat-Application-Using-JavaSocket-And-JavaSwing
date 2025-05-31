@@ -83,12 +83,23 @@ public class ChatPage extends JFrame {
 
     public ChatPage() {
         // Connect to the realtime handler
-                try {
+        try {
             // Initialize socket connection
             socket = new Socket("localhost", 12345);
             outObject = new ObjectOutputStream(socket.getOutputStream());
             outObject.flush();
             inObject = new ObjectInputStream(socket.getInputStream());
+
+            // Send authentication request to server
+            String userId = Authentication.getUser().getId();
+            outObject.writeObject(ApiRequest.builder()
+                .method("POST")
+                .url("/auth/realtime")
+                .headers(userId)
+                .payload(Authentication.getUser())
+                .build());
+                
+            outObject.flush();
 
             // Thread nhận tin nhắn từ server
             Thread receiveThread = new Thread(() -> {
