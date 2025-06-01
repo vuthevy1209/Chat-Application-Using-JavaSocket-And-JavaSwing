@@ -158,6 +158,8 @@ public class ChatPage extends JFrame {
                             }
                             messagesPanel.revalidate();
                             messagesPanel.repaint();
+
+                            loadChatList();
                         }
                     }
                 } catch (Exception e) {
@@ -269,8 +271,20 @@ public class ChatPage extends JFrame {
         JButton logoutButton = ButtonCustom.createButtonCustom("Log out", ThemeUtil.SECONDARY_COLOR, ThemeUtil.TEXT_COLOR);
         buttonPanel.add(logoutButton, BorderLayout.CENTER);
 
+        JLabel settingIcon = new JLabel(IconUtils.getImageIcon("/icon/setting.png", 30, 30));
+        settingIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+        settingIcon.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        settingIcon.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Open settings dialog
+                System.out.println( "Open settings dialog");
+            }
+        });
+
         footerPanel.add(avatarPanel, BorderLayout.WEST);
         footerPanel.add(userLabel, BorderLayout.CENTER);
+        footerPanel.add(settingIcon, BorderLayout.EAST);
         footerPanel.add(buttonPanel, BorderLayout.SOUTH);
 
 
