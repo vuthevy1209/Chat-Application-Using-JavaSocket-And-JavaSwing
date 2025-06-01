@@ -55,7 +55,7 @@ public class App {
             String method = request.getMethod();
             String url = request.getUrl();
 
-            if (!url.equals("/auth/login") && !url.equals("/auth/register")) {
+            if (!url.equals("/auth/login") && !url.equals("/auth/register") && !url.equals("/test_connection")) {
                 String header = (String) request.getHeaders();
                 if (header == null || header.isEmpty()) {
                     objectOut.writeObject(ApiResponse.builder()
@@ -92,6 +92,12 @@ public class App {
                     break;
                 case "GET":
                     switch (url) {
+                        case "/test_connection":
+                            objectOut.writeObject(ApiResponse.builder()
+                                    .code("200")
+                                    .message("Connection successful")
+                                    .build());
+                            break;
                         case "/chats/mychats":
                             objectOut.writeObject(chatController.getMyChats());
                             break;
