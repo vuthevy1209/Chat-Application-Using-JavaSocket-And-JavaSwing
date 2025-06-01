@@ -11,19 +11,15 @@ import javax.swing.*;
 // import org.w3c.dom.events.MouseEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseListener;
 
 import components.customs.AvatarPanel;
 import config.Authentication;
 import dto.request.ApiRequest;
-import dto.response.ApiResponse;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
 

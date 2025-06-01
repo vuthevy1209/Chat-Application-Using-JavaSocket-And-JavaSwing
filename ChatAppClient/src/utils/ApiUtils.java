@@ -4,12 +4,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+import config.SocketConfig;
 import dto.request.ApiRequest;
 import dto.response.ApiResponse;
 
 public class ApiUtils {
     public static ApiResponse handleRequest(ApiRequest request) {
-        try (Socket socket = new Socket("localhost", 8080)) {
+        try (Socket socket = new Socket(SocketConfig.getIpAddress(), SocketConfig.getPort())) {
             ObjectOutputStream outObject = new ObjectOutputStream(socket.getOutputStream());
             outObject.flush();
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());

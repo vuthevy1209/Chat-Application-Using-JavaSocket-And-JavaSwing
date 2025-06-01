@@ -1,5 +1,6 @@
 
 import page.LoginPage;
+import page.Config;
 import utils.CloudinaryUtils;
 
 import javax.swing.*;
@@ -13,7 +14,7 @@ public class App {
                 e.printStackTrace();
             }
             
-            new LoginPage().setVisible(true);
+            new Config().setVisible(true);
         });
     }
 }

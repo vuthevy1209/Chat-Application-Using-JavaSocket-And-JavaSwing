@@ -45,6 +45,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import config.Authentication;
+import config.SocketConfig;
 import converters.ChatConverter;
 import converters.UserConverter;
 import services.AuthService;
@@ -85,7 +86,7 @@ public class ChatPage extends JFrame {
         // Connect to the realtime handler
         try {
             // Initialize socket connection
-            socket = new Socket("localhost", 12345);
+            socket = new Socket(SocketConfig.getIpAddress(), 12345);
             outObject = new ObjectOutputStream(socket.getOutputStream());
             outObject.flush();
             inObject = new ObjectInputStream(socket.getInputStream());

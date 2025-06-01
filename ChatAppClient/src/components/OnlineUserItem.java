@@ -1,6 +1,5 @@
 package components;
 
-import models.Chat;
 import models.User;
 import page.ChatPage.ChatRefreshCallback;
 import services.ChatService;
@@ -8,17 +7,13 @@ import utils.IconUtils;
 import utils.ThemeUtil;
 import components.customs.AvatarPanel;
 import config.Authentication;
-import dto.request.ApiRequest;
 import dto.request.ChatRequest;
 import dto.response.ApiResponse;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.net.Socket;
 import java.util.List;
 
 public class OnlineUserItem extends JPanel {
