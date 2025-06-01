@@ -11,3 +11,6 @@
 ### 3. Create Group Chat
 <img width="1033" alt="image" src="https://github.com/user-attachments/assets/c0ec5539-9200-40be-a116-bcc0ee408161" />
 
+## Database
+<img width="879" alt="image" src="https://github.com/user-attachments/assets/87744649-c29b-488f-b483-61d5a2fd278f" />
+
