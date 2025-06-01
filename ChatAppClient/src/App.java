@@ -1,5 +1,6 @@
 
 import page.LoginPage;
+import utils.CloudinaryUtils;
 
 import javax.swing.*;
 

@@ -107,7 +107,7 @@ public class ChatPage extends JFrame {
                     while(true) {
                         ApiResponse response = (ApiResponse) inObject.readObject();
 
-                        if (response.getCode().equals("200")) {
+                        if (response.getCode().equals("200") && response.getMessage().equals("MESSAGE_SENT")) {
                             MessageResponse messageResponse = (MessageResponse) response.getData();
                             Message message = Message.builder()
                                 .id(messageResponse.getId())
@@ -117,7 +117,8 @@ public class ChatPage extends JFrame {
                                 .content(messageResponse.getContent())
                                 .attachmentPath(messageResponse.getAttachmentPath())
                                 .imagePath(messageResponse.getImagePath())
-                                .isRead(messageResponse.isRead())                                .createdAt(messageResponse.getCreatedAt())
+                                .isRead(messageResponse.isRead())                                
+                                .createdAt(messageResponse.getCreatedAt())
                                 .messageType(messageResponse.getMessageType())
                                 .build();
 
@@ -126,7 +127,7 @@ public class ChatPage extends JFrame {
                                 continue;
                             }
 
-                            ChatBubble bubble = new ChatBubble(message); // Assuming received messages are from others
+                            ChatBubble bubble = new ChatBubble(message, outObject); // Assuming received messages are from others
                             messagesPanel.add(bubble);
 
                             SwingUtilities.invokeLater(() -> {
@@ -143,6 +144,20 @@ public class ChatPage extends JFrame {
                             });
 
                             loadChatList(); // Refresh chat list to update last message time
+                        } else if (response.getCode().equals("200") && response.getMessage().equals("MESSAGE_DELETED")) {
+                            String deletedMessageId = (String) response.getData();
+                            // Remove the deleted message from the UI
+                            for (int i = messagesPanel.getComponentCount() - 1; i >= 0; i--) {
+                                Component comp = messagesPanel.getComponent(i);
+                                if (comp instanceof ChatBubble) {
+                                    ChatBubble bubble = (ChatBubble) comp;
+                                    if (bubble.getMessage().getId().equals(deletedMessageId)) {
+                                        messagesPanel.remove(i);
+                                    }
+                                }
+                            }
+                            messagesPanel.revalidate();
+                            messagesPanel.repaint();
                         }
                     }
                 } catch (Exception e) {
@@ -328,8 +343,12 @@ public class ChatPage extends JFrame {
         attachButton.addActionListener(e -> {
             // Open file chooser to select a file to attach
             JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
             fileChooser.setDialogTitle("Select a file to attach");
             int result = fileChooser.showOpenDialog(this);
+
+
             if (result == JFileChooser.APPROVE_OPTION) {
                 // Get the selected file
                 File selectedFile = fileChooser.getSelectedFile();
@@ -339,39 +358,38 @@ public class ChatPage extends JFrame {
                     JOptionPane.showMessageDialog(this, "Please select a chat to send the file", "Warning", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
+
+                // Create loading dialog with custom spinner
+                JDialog loadingDialog = new JDialog(this, "Uploading...", true);
+                loadingDialog.setSize(250, 150);
+                loadingDialog.setLocationRelativeTo(this);
+                loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+                loadingDialog.setResizable(false);
+                
+                // Create loading panel
+                JPanel loadingPanel = new JPanel(new BorderLayout());
+                loadingPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+                
+                // Add custom spinner
+                LoadingSpinner spinner = new LoadingSpinner();
+                JLabel loadingLabel = new JLabel("Uploading...", JLabel.CENTER);
+                loadingLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+                
+                JPanel centerPanel = new JPanel(new BorderLayout());
+                centerPanel.add(spinner, BorderLayout.CENTER);
+                centerPanel.add(loadingLabel, BorderLayout.SOUTH);
+                
+                loadingPanel.add(centerPanel, BorderLayout.CENTER);
+                loadingDialog.add(loadingPanel);
+                
+                // Disable the attach button during upload
+                attachButton.setEnabled(false);
+                
+                // Start spinner
+                spinner.start();
                 
                 // image file
                 if (selectedFile.isFile() && selectedFile.getName().toLowerCase().endsWith(".png") || selectedFile.getName().toLowerCase().endsWith(".jpg") || selectedFile.getName().toLowerCase().endsWith(".jpeg")) {
-                    
-                    // Create loading dialog with custom spinner
-                    JDialog loadingDialog = new JDialog(this, "Uploading...", true);
-                    loadingDialog.setSize(250, 150);
-                    loadingDialog.setLocationRelativeTo(this);
-                    loadingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-                    loadingDialog.setResizable(false);
-                    
-                    // Create loading panel
-                    JPanel loadingPanel = new JPanel(new BorderLayout());
-                    loadingPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-                    
-                    // Add custom spinner
-                    LoadingSpinner spinner = new LoadingSpinner();
-                    JLabel loadingLabel = new JLabel("Uploading image...", JLabel.CENTER);
-                    loadingLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-                    
-                    JPanel centerPanel = new JPanel(new BorderLayout());
-                    centerPanel.add(spinner, BorderLayout.CENTER);
-                    centerPanel.add(loadingLabel, BorderLayout.SOUTH);
-                    
-                    loadingPanel.add(centerPanel, BorderLayout.CENTER);
-                    loadingDialog.add(loadingPanel);
-                    
-                    // Disable the attach button during upload
-                    attachButton.setEnabled(false);
-                    
-                    // Start spinner
-                    spinner.start();
-                    
                     // Perform upload in background thread
                     SwingWorker<String, Void> uploadWorker = new SwingWorker<String, Void>() {
                         @Override
@@ -403,28 +421,6 @@ public class ChatPage extends JFrame {
                                     .build());
                                 outObject.flush();
 
-                                // add image to messages panel
-                                Message message = Message.builder()
-                                    .senderId(Authentication.getUser().getId())
-                                    .senderUsername(Authentication.getUser().getUsername())
-                                    .chatId(currentChat.getId())
-                                    .imagePath(imageUrl)
-                                    .messageType("IMAGE")
-                                    .build();
-
-                                ChatBubble bubble = new ChatBubble(message);
-                                messagesPanel.add(bubble);
-                                messagesPanel.revalidate();
-                                messagesPanel.repaint();
-                                SwingUtilities.invokeLater(() -> {
-                                    JScrollPane sp = (JScrollPane) messagesPanel.getParent().getParent();
-                                    JScrollBar vertical = sp.getVerticalScrollBar();
-                                    vertical.setValue(vertical.getMaximum());
-                                });
-
-                                // load chat list to update last message time
-                                loadChatList();
-                                
                             } catch (Exception ex) {
                                 SwingUtilities.invokeLater(() -> {
                                     JOptionPane.showMessageDialog(ChatPage.this, 
@@ -448,7 +444,59 @@ public class ChatPage extends JFrame {
                     loadingDialog.setVisible(true);
                     
                 } else {
-                    JOptionPane.showMessageDialog(this, "Please select a valid image file", "Warning", JOptionPane.WARNING_MESSAGE);
+                    // Perform upload in background thread
+                    SwingWorker<String, Void> uploadWorker = new SwingWorker<String, Void>() {
+                        @Override
+                        protected String doInBackground() throws Exception {
+                            return CloudinaryUtils.uploadFile(selectedFile);
+                        }
+                        
+                        @Override
+                        protected void done() {
+                            try {
+                                String fileUrl = get();
+
+                                // Create a message request for the file
+                                MessageRequest messageRequest = MessageRequest.builder()
+                                    .senderId(Authentication.getUser().getId())
+                                    .senderUsername(Authentication.getUser().getUsername())
+                                    .chatId(currentChat.getId())
+                                    .attachmentPath(fileUrl)
+                                    .content(selectedFile.getName()) // Set file name as content
+                                    .messageType("FILE")
+                                    .requestType("CREATE")
+                                    .build();
+
+                                // Send message request to server
+                                outObject.writeObject(ApiRequest.builder()
+                                    .method("POST")
+                                    .url("/messages")
+                                    .headers(Authentication.getUser().getId())
+                                    .payload(messageRequest)
+                                    .build());
+                                outObject.flush();
+                                
+                            } catch (Exception ex) {
+                                SwingUtilities.invokeLater(() -> {
+                                    JOptionPane.showMessageDialog(ChatPage.this, 
+                                        "Failed to upload image: " + ex.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+                                });
+                                ex.printStackTrace();
+                            } finally {
+                                // Close loading dialog and re-enable button
+                                SwingUtilities.invokeLater(() -> {
+                                    spinner.stop();
+                                    loadingDialog.dispose();
+                                    attachButton.setEnabled(true);
+                                });
+                            }
+                        }
+                    };
+                    
+                    // Show loading dialog and start upload
+                    uploadWorker.execute();
+                    loadingDialog.setVisible(true);  
                 }
             }
         });
@@ -841,23 +889,11 @@ public class ChatPage extends JFrame {
             // Add messages for this date
             List<Message> messages = messagesByDate.get(date);
             for (Message message : messages) {
-                ChatBubble bubble = new ChatBubble(message);
+                ChatBubble bubble = new ChatBubble(message, outObject);
                 messagesPanel.add(bubble);
             }
         }
-        
-        // Add glue at the bottom to push messages up
-        /*
-            messagesPanel.add(Box.createVerticalGlue());
-            Thêm một "vertical glue" vào cuối panel chứa tin nhắn
-            "Glue" là một component đặc biệt có thể co giãn để chiếm tất cả không gian còn lại
-            Mục đích là "đẩy" tất cả tin nhắn lên phía trên của panel khi không đủ tin nhắn để lấp đầy không gian hiển thị
-            Giúp tin nhắn luôn bắt đầu từ phía trên thay vì "trôi nổi" ở giữa panel
-            messagesPanel.revalidate(); messagesPanel.repaint();
-            revalidate() bắt Swing tính toán lại layout sau khi thêm/xóa component
-            repaint() vẽ lại giao diện với các thay đổi mới
-            Đảm bảo người dùng nhìn thấy tất cả tin nhắn mới được thêm vào
-         */
+
         // Add vertical glue to push messages to the top and prevent stretching
         messagesPanel.add(Box.createVerticalGlue());
 
@@ -866,22 +902,7 @@ public class ChatPage extends JFrame {
         
         messagesPanel.revalidate();
         messagesPanel.repaint();
-        
-        // Scroll to bottom
-        /*
-            SwingUtilities.invokeLater(() -> {...});
-            Đưa đoạn code vào Event Dispatch Thread của Swing
-            Đảm bảo code chạy sau khi giao diện đã được cập nhật hoàn toàn
 
-            JScrollPane scrollPane = (JScrollPane) messagesPanel.getParent().getParent();
-            Lấy ra đối tượng JScrollPane chứa messagesPanel
-            messagesPanel nằm trong một viewport, viewport nằm trong scrollPane
-
-            vertical.setValue(vertical.getMaximum());
-            Thiết lập thanh cuộn xuống vị trí thấp nhất (cuối cùng)
-            Đảm bảo người dùng luôn nhìn thấy tin nhắn mới nhất ở dưới cùng
-            Mô phỏng hành vi của các ứng dụng chat thông thường khi tin nhắn mới xuất hiện
-         */
         SwingUtilities.invokeLater(() -> {
             JScrollPane scrollPane = (JScrollPane) messagesPanel.getParent().getParent();
             JScrollBar vertical = scrollPane.getVerticalScrollBar();
@@ -922,34 +943,6 @@ public class ChatPage extends JFrame {
 
             // Clear input field
             messageField.setText("");
-
-            // // Reload chat
-            // ApiResponse res = (ApiResponse) ChatService.getChatById(currentChat.getId());
-            // Chat chat = ChatConverter.converterToChat((ChatResponse) res.getData());
-            // loadChat(chat);
-
-            // add message to messages panel
-            Message message = Message.builder()
-                .senderId(Authentication.getUser().getId())
-                .senderUsername(Authentication.getUser().getUsername())
-                .chatId(currentChat.getId())
-                .content(content)
-                .createdAt(LocalDateTime.now())
-                .messageType("TEXT")
-                .build();
-
-            ChatBubble bubble = new ChatBubble(message); // Assuming sent messages are from the user
-            messagesPanel.add(bubble);
-            messagesPanel.revalidate(); // Update layout
-            messagesPanel.repaint();    // Redraw the interface
-            SwingUtilities.invokeLater(() -> {
-                JScrollPane scrollPane = (JScrollPane) messagesPanel.getParent().getParent();
-                JScrollBar vertical = scrollPane.getVerticalScrollBar();
-                vertical.setValue(vertical.getMaximum()); // Scroll to bottom after sending message
-            });
-
-            // load chat list to update last message time
-            loadChatList(); 
 
         } catch (IOException e) {
             System.err.println("Failed to send message: " + e.getMessage());
