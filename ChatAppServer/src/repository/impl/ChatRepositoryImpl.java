@@ -9,6 +9,8 @@ import models.Chat;
 import dto.request.ChatRequest;
 import dto.response.ChatResponse;
 import repository.ChatRepository;
+
+import java.util.List;
 import java.util.UUID;
 
 import utils.ConnectionUtil;
@@ -46,7 +48,6 @@ public class ChatRepositoryImpl implements ChatRepository {
 
     @Override
     public boolean save(ChatRequest chatRequest) {
-
         try (Connection connection = ConnectionUtil.getConnection();
             Statement statement = connection.createStatement()) {
 

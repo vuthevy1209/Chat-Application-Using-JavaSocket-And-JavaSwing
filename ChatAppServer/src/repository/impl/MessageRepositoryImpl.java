@@ -2,6 +2,7 @@ package repository.impl;
 
 import dto.request.MessageRequest;
 import dto.response.MessageResponse;
+import models.Message;
 import repository.MessageRepository;
 
 import java.sql.Connection;
@@ -17,25 +18,50 @@ import utils.ConnectionUtil;
 public class MessageRepositoryImpl implements MessageRepository {
 
     @Override
-    public boolean save(MessageRequest messageRequest) {
+    public Message save(MessageRequest messageRequest) {
 
         try (Connection connection = ConnectionUtil.getConnection();
             Statement statement = connection.createStatement()) {
 
-            String imagePath = messageRequest.getImagePath() == null ? "NULL" : "'" + messageRequest.getImagePath() + "'";
-            String attachmentPath = messageRequest.getAttachmentPath() == null ? "NULL" : "'" + messageRequest.getAttachmentPath() + "'";
-            String messageType = messageRequest.getMessageType() == null ? "NULL" : "'" + messageRequest.getMessageType() + "'";
+            // Generate a unique ID for the message
+            String generatedId = UUID.randomUUID().toString();
             
-            String sql = "INSERT INTO messages (id, sender_id, chat_id, content, image_path, attachment_path, message_type, is_read, created_at) " +
-                    "VALUES ('" + messageRequest.getId() + "', '" + messageRequest.getSenderId() + "', '" + messageRequest.getChatId() + "', '" +
-                    messageRequest.getContent() + "', " + imagePath + ", " + attachmentPath + ", " + messageType + ", false, NOW())";
+            String sql;
+
+            if (messageRequest.getMessageType().equals("TEXT")) {
+                sql = "INSERT INTO messages (id, sender_id, chat_id, content, message_type, is_read, created_at) " +
+                        "VALUES ('" + generatedId + "', '" + messageRequest.getSenderId() + "', '" + messageRequest.getChatId() + "', '" +
+                        messageRequest.getContent() + "', 'TEXT', false, NOW())";
+            } else if (messageRequest.getMessageType().equals("IMAGE")) {
+                sql = "INSERT INTO messages (id, sender_id, chat_id, content, image_path, message_type, is_read, created_at) " +
+                        "VALUES ('" + generatedId + "', '" + messageRequest.getSenderId() + "', '" + messageRequest.getChatId() + "', '" +
+                        messageRequest.getContent() + "', '" + messageRequest.getImagePath() + "', 'IMAGE', false, NOW())";
+            } else if (messageRequest.getMessageType().equals("FILE")) {
+                sql = "INSERT INTO messages (id, sender_id, chat_id, content, attachment_path, message_type, is_read, created_at) " +
+                        "VALUES ('" + generatedId + "', '" + messageRequest.getSenderId() + "', '" + messageRequest.getChatId() + "', '" +
+                        messageRequest.getContent() + "', '" + messageRequest.getAttachmentPath() + "', 'FILE', false, NOW())";
+            } else {
+                throw new IllegalArgumentException("Invalid request type: " + messageRequest.getMessageType());
+            }
 
             statement.executeUpdate(sql);
-
-            return true;
+            
+            return Message.builder()
+                    .id(generatedId)
+                    .senderId(messageRequest.getSenderId())
+                    .senderUsername(messageRequest.getSenderUsername())
+                    .chatId(messageRequest.getChatId())
+                    .content(messageRequest.getContent())
+                    .imagePath(messageRequest.getImagePath())
+                    .attachmentPath(messageRequest.getAttachmentPath())
+                    .messageType(messageRequest.getMessageType())
+                    .isRead(false)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .build();
+        
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+            return null;
         }
     }
 
@@ -128,6 +154,9 @@ public class MessageRepositoryImpl implements MessageRepository {
                         .createdAt(resultSet.getTimestamp("created_at").toLocalDateTime())
                         .build());
             }
+
+            // sort messages by created_at in descending order
+            messages.sort((m1, m2) -> m2.getCreatedAt().compareTo(m1.getCreatedAt()));
             
             return messages;
         } catch (SQLException e) {
@@ -164,5 +193,22 @@ public class MessageRepositoryImpl implements MessageRepository {
             e.printStackTrace();
             return false;
         }
+    }
+
+    @Override
+    public String findChatIdByMessageID(String messageId) {
+        try (Connection connection = ConnectionUtil.getConnection();
+            Statement statement = connection.createStatement()) {
+
+            String sql = "SELECT chat_id FROM messages WHERE id = '" + messageId + "'";
+            ResultSet resultSet = statement.executeQuery(sql);
+
+            if (resultSet.next()) {
+                return resultSet.getString("chat_id");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

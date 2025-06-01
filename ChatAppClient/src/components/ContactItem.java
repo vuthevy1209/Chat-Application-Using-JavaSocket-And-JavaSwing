@@ -34,8 +34,7 @@ public class ContactItem extends JPanel {
         setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         // Avatar
-        AvatarPanel avatarPanel = new AvatarPanel(chat.getName(), chat.getParticipants().get(0).getAvatarPath(), 40);
-        add(avatarPanel, BorderLayout.WEST);
+        AvatarPanel avatarPanel = null;
         
         // Contact info
         JPanel infoPanel = new JPanel(new BorderLayout());
@@ -44,14 +43,18 @@ public class ContactItem extends JPanel {
         JLabel nameLabel = null;
         if (chat.isGroup()) {
             nameLabel = new JLabel(chat.getName());
+            avatarPanel = new AvatarPanel(chat.getName(), null, 40);
         } else {
             User participant = chat.getParticipants().get(0);
             if (participant.getId().equals(Authentication.getUser().getId())) {
                 participant = chat.getParticipants().get(1); // Get the other participant in a one-on-one chat
             }
             nameLabel = new JLabel(participant.getUsername());
+            avatarPanel = new AvatarPanel(participant.getUsername(), participant.getAvatarPath(), 40);
         }
-        
+
+        add(avatarPanel, BorderLayout.WEST);
+
         nameLabel.setFont(ThemeUtil.NORMAL_FONT);
         infoPanel.add(nameLabel, BorderLayout.CENTER);
 

@@ -1,11 +1,12 @@
 package repository;
 
 import dto.response.MessageResponse;
+import models.Message;
 import dto.request.MessageRequest;
 import java.util.List;
 
 public interface MessageRepository {
-    public boolean save(MessageRequest messageRequest);
+    public Message save(MessageRequest messageRequest);
 
     public boolean update(MessageRequest messageRequest);
 
@@ -18,5 +19,7 @@ public interface MessageRepository {
     public boolean existsById(String id);
 
     public boolean isMessageSentBySender(String messageId, String senderId);
+
+    public String findChatIdByMessageID(String messageId);
 
 }

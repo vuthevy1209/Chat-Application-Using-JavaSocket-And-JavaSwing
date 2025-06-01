@@ -16,4 +16,10 @@ public interface ChatService {
     public ChatResponse getChatById(String id);
 
     public List<ChatResponse> getAllMyChats();
+
+    public List<String> getAllUserIdsByChatId(String chatId);
+
+    public List<String> getAllParticipantsByChatId(String chatId);
+
+    public String findChatIdByMessageId(String messageId);
 }

@@ -122,15 +122,19 @@ public class ChatPage extends JFrame {
                                 .messageType(messageResponse.getMessageType())
                                 .build();
 
+                            if (currentChat == null) {
+                                continue; // Skip if no chat is selected
+                            }
+
                             // Check if the message is for the current chat
-                            if (currentChat != null && !currentChat.getId().equals(message.getChatId())) {
+                            if (!currentChat.getId().equals(message.getChatId())) {
                                 continue;
                             }
 
-                            ChatBubble bubble = new ChatBubble(message, outObject); // Assuming received messages are from others
-                            messagesPanel.add(bubble);
-
                             SwingUtilities.invokeLater(() -> {
+                                ChatBubble bubble = new ChatBubble(message, outObject); 
+                                bubble.setMaximumSize(new Dimension(Integer.MAX_VALUE, bubble.getPreferredSize().height));
+
                                 messagesPanel.add(bubble);
                                 messagesPanel.revalidate(); // Cập nhật layout
                                 messagesPanel.repaint();    // Vẽ lại giao diện
@@ -238,9 +242,21 @@ public class ChatPage extends JFrame {
   
         JLabel headerIcon = new JLabel(IconUtils.getImageIcon("/icon/Message.png", 50, 50));
         headerIcon.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
+
+        JLabel reload = new JLabel(IconUtils.getImageIcon("/icon/reload.png", 30, 30));
+        reload.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 10));
+        reload.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        reload.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Reload chat list
+                loadChatList();
+            }
+        });
         
         headerPanel.add(headerIcon, BorderLayout.WEST);
         headerPanel.add(titleLabel, BorderLayout.CENTER);
+        headerPanel.add(reload, BorderLayout.EAST);
         
         // Chat list
         chatListPanel = new JPanel();
@@ -834,7 +850,15 @@ public class ChatPage extends JFrame {
         currentChat = chat;
 
         // Update chat name in header
-        currentChatNameLabel.setText(chat.getName());
+        if (chat.isGroup()) {
+            currentChatNameLabel.setText(chat.getName());
+        } else {
+            User participant = chat.getParticipants().get(0);
+            if (participant.getId().equals(Authentication.getUser().getId())) {
+                participant = chat.getParticipants().get(1); // Get the other participant in a one-on-one chat
+            }
+            currentChatNameLabel.setText(participant.getUsername());
+        }
         
         // Clear messages panel
         messagesPanel.removeAll();
@@ -898,12 +922,15 @@ public class ChatPage extends JFrame {
         // Add messages by date groups
         for (String date : sortedDates) {
             // Add date separator
-            messagesPanel.add(new DateSeparator(date));
-            
+            DateSeparator dateSeparator = new DateSeparator(date);
+            dateSeparator.setMaximumSize(new Dimension(Integer.MAX_VALUE, dateSeparator.getPreferredSize().height));
+            messagesPanel.add(dateSeparator);
+
             // Add messages for this date
             List<Message> messages = messagesByDate.get(date);
             for (Message message : messages) {
                 ChatBubble bubble = new ChatBubble(message, outObject);
+                bubble.setMaximumSize(new Dimension(Integer.MAX_VALUE, bubble.getPreferredSize().height));
                 messagesPanel.add(bubble);
             }
         }

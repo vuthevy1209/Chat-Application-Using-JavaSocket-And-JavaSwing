@@ -1,26 +1,13 @@
 package config;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import models.User;
-
 public class Authentication {
-    private static User currentUser = null;
-    private static List<User> userOnlines = new ArrayList<>();
+    private static final ThreadLocal<String> userId = new ThreadLocal<>();     
 
-    public static void setUser(User user) {
-        currentUser = user;
+    public static String getUserId() {
+        return userId.get();
     }
 
-    public static User getUser() {
-        return currentUser;
-    }
-
-    public static void setUserOnlines(List<User> users) {
-        userOnlines = users;
-    }
-    public static List<User> getUserOnlines() {
-        return userOnlines;
+    public static void setUserId(String userId) {
+        Authentication.userId.set(userId);
     }
 }

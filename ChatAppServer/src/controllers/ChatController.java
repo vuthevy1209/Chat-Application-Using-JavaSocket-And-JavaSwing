@@ -34,7 +34,7 @@ public class ChatController {
                 return ApiResponse.builder()
                         .code("200")
                         .message("Chat created successfully")
-                        .data(chatService.createChat(chatRequest))
+                        .data(chatService.getChatById(chatRequest.getId()))
                         .build();
             } else {
                 return ApiResponse.builder()
@@ -68,6 +68,23 @@ public class ChatController {
                         .message("Failed to send message")
                         .build();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.builder()
+                    .code("500")
+                    .message("Internal server error")
+                    .build();
+        }
+    }
+
+    public ApiResponse getChatById(Object payload) {
+        String chatId = (String) payload;
+        try {
+            return ApiResponse.builder()
+                    .code("200")
+                    .message("Chat retrieved successfully")
+                    .data(chatService.getChatById(chatId))
+                    .build();
         } catch (Exception e) {
             e.printStackTrace();
             return ApiResponse.builder()

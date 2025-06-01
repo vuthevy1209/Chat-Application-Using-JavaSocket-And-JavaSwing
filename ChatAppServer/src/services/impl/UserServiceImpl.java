@@ -1,7 +1,13 @@
 package services.impl;
 
 import services.UserService;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import config.Authentication;
+import config.UserOnlineList;
+import converters.UserConverter;
 import dto.request.RegisterRequest;
 import dto.response.UserResponse;
 import models.User;
@@ -50,6 +56,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<UserResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        List<UserResponse> userResponses = new ArrayList<>();
+        for (User user : users) {
+            UserResponse userResponse = UserConverter.converterToUserResponse(user);
+            userResponses.add(userResponse);
+        }
+        
+        return userResponses;
+    }
+
+    @Override
     public UserResponse getUserByUsername(String username) {
         return userRepository.findByUsername(username);
     }
@@ -62,8 +80,11 @@ public class UserServiceImpl implements UserService {
     @Override 
     public boolean logout() {
         try {
-            Authentication.getUserOnlines().remove(Authentication.getUser());
-            Authentication.setUser(null);
+            String userId = Authentication.getUserId();
+            Authentication.setUserId(null);
+            
+            // delete user from online list
+            UserOnlineList.removeUserOnline(userId);
 
             return true;
         } catch (Exception e) {

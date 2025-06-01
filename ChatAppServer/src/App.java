@@ -1,15 +1,19 @@
+import java.awt.Label;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.http.HttpResponse.PushPromiseHandler;
 
 import config.Authentication;
+import config.UserOnlineList;
 import controllers.AuthController;
 import controllers.ChatController;
 import controllers.MessageController;
 import dto.request.ApiRequest;
 import dto.response.ApiResponse;
+import server.RealtimeHandler;
 
 public class App {
     private static AuthController authController = new AuthController();
@@ -17,6 +21,12 @@ public class App {
     private static MessageController messageController = new MessageController();
 
     public static void main(String[] args) {
+        // Handle Realtime connections
+        Thread realtimeThread = new Thread(new RealtimeHandler());
+        realtimeThread.start();  // Start the RealtimeHandler thread
+
+        // Start the RealtimeHandler to handle WebSocket connections
+
         try (ServerSocket serverSocket = new ServerSocket(8080)) {
             System.out.println("Server is listening on port 8080");
 
@@ -45,6 +55,18 @@ public class App {
             String method = request.getMethod();
             String url = request.getUrl();
 
+            if (!url.equals("/auth/login") && !url.equals("/auth/register")) {
+                String header = (String) request.getHeaders();
+                if (header == null || header.isEmpty()) {
+                    objectOut.writeObject(ApiResponse.builder()
+                            .code("401")
+                            .message("Unauthorized")
+                            .build());
+                } else {
+                    Authentication.setUserId(header);
+                }
+            } 
+            
             switch (method) {
                 case "POST":
                     switch (url) {
@@ -73,8 +95,14 @@ public class App {
                         case "/chats/mychats":
                             objectOut.writeObject(chatController.getMyChats());
                             break;
+                        case "/chats/id":
+                            objectOut.writeObject(chatController.getChatById(request.getPayload()));
+                            break;
                         case "/users/online":
                             objectOut.writeObject(authController.getAllUsersOnline());
+                            break;
+                        case "/users":
+                            objectOut.writeObject(authController.getAllUsers());
                             break;
                         default:
                             objectOut.writeObject("Unsupported GET URL");

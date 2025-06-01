@@ -15,6 +15,7 @@ public class Message implements Serializable {
 
     private String id;
     private String senderId;
+    private String senderUsername;
     private String chatId;
     private String content;
     private String imagePath;

@@ -2,6 +2,7 @@ package controllers;
 
 import dto.request.MessageRequest;
 import dto.response.ApiResponse;
+import dto.response.MessageResponse;
 import services.MessageService;
 import services.impl.MessageServiceImpl;
 
@@ -15,11 +16,13 @@ public class MessageController {
     public ApiResponse handleSendMessage(Object payload) {
         try {
             MessageRequest messageRequest = (MessageRequest) payload;
-            boolean isSent = messageService.sendMessage(messageRequest);
-            if (isSent) {
+            MessageResponse messageResponse = messageService.sendMessage(messageRequest);
+
+            if (messageResponse != null) {
                 return ApiResponse.builder()
                         .code("200")
                         .message("Message sent successfully")
+                        .data(messageResponse)
                         .build();
             } else {
                 return ApiResponse.builder()

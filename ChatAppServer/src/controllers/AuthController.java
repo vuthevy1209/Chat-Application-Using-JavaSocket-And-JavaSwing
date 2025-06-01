@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import config.Authentication;
+import config.UserOnlineList;
 import dto.request.AuthenticateRequest;
 import dto.request.RegisterRequest;
 
@@ -91,9 +92,9 @@ public class AuthController {
     public ApiResponse getAllUsersOnline() {
         try {
             List<UserResponse> userResponses = new ArrayList<>();
-            for (User user : Authentication.getUserOnlines()) {
+            for (User user : UserOnlineList.getUserOnlines()) {
                 UserResponse userResponse = UserConverter.converterToUserResponse(user);
-                if (userResponse != null && !user.getId().equals(Authentication.getUser().getId())) {
+                if (userResponse != null && !user.getId().equals(Authentication.getUserId())) {
                     userResponses.add(userResponse);
                 }
             }
@@ -104,6 +105,23 @@ public class AuthController {
                 .data(userResponses)
                 .build();
                 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.builder()
+                .code("500")
+                .message("Internal server error")
+                .build();
+        }
+    }
+
+    public ApiResponse getAllUsers() {
+        try {
+            List<UserResponse> userResponses = userService.getAllUsers();
+            return ApiResponse.builder()
+                .code("200")
+                .message("Users retrieved successfully")
+                .data(userResponses)
+                .build();
         } catch (Exception e) {
             e.printStackTrace();
             return ApiResponse.builder()

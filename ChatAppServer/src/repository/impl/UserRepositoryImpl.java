@@ -2,9 +2,13 @@ package repository.impl;
 
 import repository.UserRepository;
 import utils.ConnectionUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import config.Authentication;
+import config.UserOnlineList;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -113,6 +117,30 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public List<User> findAll() {
+        List<User> users = new ArrayList<>();
+        try (Connection connection = ConnectionUtil.getConnection();
+             Statement statement = connection.createStatement()) {
+
+            String sql = "SELECT * FROM users";
+            ResultSet resultSet = statement.executeQuery(sql);
+
+            while (resultSet.next()) {
+                User user = User.builder()
+                        .id(resultSet.getString("id"))
+                        .username(resultSet.getString("username"))
+                        .email(resultSet.getString("email"))
+                        .avatarPath(resultSet.getString("avatar_path"))
+                        .build();
+                users.add(user);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return users;
+    }
+
+    @Override
     public boolean save(RegisterRequest user) {
         String generatedId = UUID.randomUUID().toString();
         String hashedPassword = String.valueOf(user.getPassword().hashCode());
@@ -182,8 +210,8 @@ public class UserRepositoryImpl implements UserRepository {
                         .build();
 
                 // Set the authenticated user in the Authentication context
-                Authentication.setUser(user);
-                Authentication.getUserOnlines().add(user);
+                Authentication.setUserId(user.getId());
+                UserOnlineList.addUserOnline(user);
 
                 return UserResponse.builder()
                         .id(user.getId())
@@ -199,11 +227,5 @@ public class UserRepositoryImpl implements UserRepository {
             e.printStackTrace();
             return null;
         }
-    }
-
-    @Override
-    public boolean logout(String username) {
-        Authentication.setUser(null);
-        return true;
     }
 }

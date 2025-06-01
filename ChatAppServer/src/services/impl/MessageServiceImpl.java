@@ -1,7 +1,9 @@
 package services.impl;
 
 import dto.request.MessageRequest;
+import dto.response.ApiResponse;
 import dto.response.MessageResponse;
+import models.Message;
 import services.MessageService;
 import repository.MessageRepository;
 import repository.UserRepository;
@@ -22,26 +24,43 @@ public class MessageServiceImpl implements MessageService {
 
 
     @Override
-    public boolean sendMessage(MessageRequest messageRequest) {
+    public MessageResponse sendMessage(MessageRequest messageRequest) {
         String sendId = messageRequest.getSenderId();
         String chatId = messageRequest.getChatId();
 
         // Check if the sender exists
         if (!userRepository.existsById(sendId)) {
-            return false;
+            return null;
         }
 
         // Check if the chat exists
         if (!chatRepository.existsById(chatId)) {
-            return false;
+            return null;
         }
 
         // Check if the sender is a participant of the chat
         if (!chatParticipantRepository.isParticipant(sendId, chatId)) {
-            return false;
+            return null;
         }
 
-        return messageRepository.save(messageRequest);
+        Message message = messageRepository.save(messageRequest);
+
+        return message != null ? 
+            MessageResponse.builder()
+                .id(message.getId())
+                .senderId(message.getSenderId())
+                .senderUsername(message.getSenderUsername())
+                .chatId(message.getChatId())
+                .content(message.getContent())
+                .imagePath(message.getImagePath())
+                .attachmentPath(message.getAttachmentPath())
+                .messageType(message.getMessageType())
+                .isRead(message.isRead())
+                .createdAt(message.getCreatedAt())
+                .build() 
+            : null;
+
+
     }
 
     @Override
